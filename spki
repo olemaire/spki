@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+#   SPKI -  Simple Perl Key Infrastructur
+#   Copyright © 2013 Senso-Rezo
+#   All rights reserved.
+#   See LICENSE file for licensing information.
+#   See http://github.com/olemaire/spki for more information.
+
+# spki - spki core util (command line)
+use strict;
+use warnings;
+use infra;
+
+#infra::Usage();
+infra::DieLogging("bla");
+
+# - This Is The End
