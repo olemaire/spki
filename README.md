@@ -22,3 +22,5 @@ TODO
 
 # Credits
 Thank's to ... tons of folks I did meet the last 15 years around the PKI(X most of the time) subject :)
+
+If you are new to the PKI world, an excellent tutorial on implementing a real-world PKI with the [OpenSSL] toolkit can be found there: [http://pki-tutorial.readthedocs.org](http://pki-tutorial.readthedocs.org "")
