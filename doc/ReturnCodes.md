@@ -1,4 +1,5 @@
 [Bash Return Codes]: http://tldp.org/LDP/abs/html/exitcodes.html
+[syslog Facility and Severity levels]: http://en.wikipedia.org/wiki/Syslog
 
 # SPKI return codes
 
@@ -15,4 +16,21 @@ Return Code | Meaning                           | Observations
 
 Note for contributors: if you engage on hacking **SPKI** I strongly suggest you to avoid using [Bash Return Codes] for **SPKI** functions (so avoiding 1-2, 126-165 and 255). Of course, use them for to trap Bash related errors.
 
-The same return codes will be used for the Bash and the Perl flavors.
+The same return codes will be used for the Bash and the Perl flavors of **SPKI**.
+
+# SPKI Logging (syslog) facility and severity levels
+
+**SPKI** will log its actions (and potentials errors) to syslog, using the regular [syslog Facility and Severity levels].
+
+Severity Level | Meaning | Observations
+:------------- | :------ | :------------ 
+emerg          |         | 
+alert          | FIXME TO BE FINISHED
+crit           |
+err(or)        |
+warn(ing)      |
+notice         |
+info           |
+debug          |
+
+The same return facility and severity levels will be used for the Bash and the Perl flavors of **SPKI**.
