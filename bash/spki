@@ -7,4 +7,74 @@
 
 # spki - spki core util (command line)
 
+DOMAIN=senso-rezo.org
+COMPANY="Senso/Rezo"
+BITS=4096
+SERVER_DAYS=7300
+USER_DAYS=400
+CONFIG_CA="/tmp/root_ca.conf"
+dir=$(cd `dirname $0` && pwd)
+
+
+Usage(){
+echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
+
+Usage: spki <option> (<subject>) 
+
+Available options are:
+    -init			 Initialize a new Certiciate Authority.
+    -server <fqdn>		 Generate a Server certificate.
+    -user <email>		 Generate an User certificate.
+    -verify <email,fqdn>	 Verify a given certificate.
+    -renew <email,fqdn>		 Renew a given certificate.
+    -revoke <email,fqdn>	 Revoke a given certificate.
+    -crl			 Generate a Certificate Revocation List.
+    -help                        Display this short help message.
+
+Exemples:
+	spki -server www.senso-rezo.org
+	spki -user olivier.lemaire@senso-rezo.org
+	spki -revoke www.senso-rezo.org
+	spki -renew olivier.lemaire@senso-rezo.org
+	spki crl
+
+"
+}
+
+case "$1" in
+    -init|--init)
+	echo "init"
+	;;
+    -server|--server)
+	echo "server $2"
+	;;
+    -user|--user)
+	echo "user $2"
+	;;
+    -verify|--verify)
+	echo "verify $2"
+	;;
+    -renew|--renew)
+	echo "renew $2"
+	;;
+    -revoke|--revoke)
+	echo "revoke $2"
+	;;
+    -crl|--crl)
+	echo "crl"
+	;;
+    -h|-help|--help)
+	Usage
+	;;
+    "")
+	echo "SPKI Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)"
+	echo ""
+	echo "Please RTFM: spki -help"
+	echo ""
+	;;
+    *)
+	echo "SPKI invalid function call (try --help)"
+        exit 127
+esac
+
 # - This Is The End
