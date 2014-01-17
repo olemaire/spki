@@ -7,39 +7,111 @@
 
 # spki - spki core util (command line)
 
-DOMAIN=senso-rezo.org
-COMPANY="Senso/Rezo"
-BITS=4096
-SERVER_DAYS=7300
-USER_DAYS=400
-CONFIG_CA="/tmp/root_ca.conf"
-dir=$(cd `dirname $0` && pwd)
+# user/context variables - have to be changed depending on user/context
+DOMAIN=senso-rezo.org            # Domain name that will appear by default: change it by your company domain name
+COMPANY="Senso/Rezo"             # Company name that will appear by default: change it by your company name
+BITS=4096                        # Random bits used
+SERVER_DAYS=7300                 # Server certificate will be vailid (new, renewed) for this period (nearly 20 years...)
+USER_DAYS=400                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 
+
+# SPKI internal variables - should not be changed
+dir=$(cd `dirname $0` && pwd)          # directory where the SPKI is to be run
+                                       # where the following sub-directories are used:
+                                       # private/ : where the Certificate Authority key is stored for internal SPKI usage
+                                       #   ca.key: Certificate Authority private key - MUST NOT BE DISTRIBUTED
+                                       #   root_ca.conf: Certificate Authority OpenSSL configuration file
+                                       # datas/ : where index, serials and DB are stored for internal SPKI usage
+                                       #   index(.old): index of all certificates (and last action backup)
+                                       #   serial(.old): last certificate serial issued (and last action backup)
+                                       #   certs/: directory containing all certificates delivered so far
+                                       #   random_bits: pseudo-Random bytes used for OpenSSL entropy
+CONFIG_CA="$dir/private/root_ca.conf"  # where the Certificate Authority OpenSSL configuration file is stored
+
+
+
+## FUNCTIONS
 CheckEnv(){
-  if [ ! -d datas/ca.db.certs ]; then
-    mkdir datas/ca.db.certs
-  fi
-  if [ ! -f datas/ca.db.serial ]; then
-    echo '01' > datas/ca.db.serial
-  fi
-  if [ ! -f datas/ca.db.index ]; then
-    cp /dev/null datas/ca.db.index
-  fi
-}
-
-InitalizeCA(){
-if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
-  echo "BEWARE : all previous certificates will be erased!" ;
-  echo -e -n "Continue (y/n)? " ;
-  read i ;
-  [ "$i" = "y" ] || exit -1 ;
+# Check environment - and create directories if not already done.
+if [ ! -d $dir/datas/certs ]; then
+  mkdir $dir/datas/certs || DieLogging 126 "CheckEnv Cannot create $dir/datas/certs directory"
 fi
-FIXMESTOPPEDHERE
+if [ ! -f $dir/datas/serial ]; then
+  echo '01' > $dir/datas/serial || DieLogging 126 "CheckEnv cannot create $dir/datas/serial file"
+fi
+if [ ! -f $dir/datas/index ]; then
+  /bin/cp /dev/null $dir/datas/index || DieLogging 126 "CheckEnv cannot create $dir/datas/index file"
+fi
 }
 
+InitializeCA(){
+# Initialize the PKI(CA) elements - warning as purge any existing previous elements
+#if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
+if [ -f $dir/spki ]; then
+  echo "ALERT: all previous existing certificates will be erased!" ;
+  echo -e -n "Are your sure you want to continue (y/n)? " ;
+  read i ;
+  [ "$i" = "y" ] || DieLogging 10 "InializeCA was canceled by user";
+fi
+PrintMessage "notice" "Initializing Certificate Authority"
+
+PrintMessage "notice" "-> cleaning existing datas..."
+  rm -rf $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
+  mkdir $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
+
+PrintMessage "notice" "-> Initializing Random Bits..."
+  /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
+
+PrintMessage "notice" "-> Generating the Certificate Authority private Key"
+  sleep 1 
+  /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+  chmod 600 $dir/private/ca.key || DieLogging 126 "InitializeCA cannot chmod the Certificate Authority private Key"
+
+PrintMessage "notice" "-> Generating Certificate Authority OpenSSL configuration file"
+#FIXMESTOPPEDHERE
+# FIXME: blog generation
+# I'd like to make them without ampering the script visibility.
+# (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
+
+PrintMessage "notice" "-> Self-signing the Certificate Authority Certificate"
+  /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
+#FIXME: $CONFIG_CA is not initialiawed yet -> MUST BE DONE !!!!!. -> see above.
+
+}
+
+DieLogging(){
+# exit with error code and associated message, sysloging too.
+errorcode=$1
+message=$2
+echo "Error Code: $errorcode - cause: $2 - Exiting..."
+exit $errorcode
+##TODO:
+# - syslog (function)
+# - printing error code associated message (see doc/ReturnCodes.md)
+}
+
+LogToSyslog() {
+# will log to syslog
+## FIXME: for no will only print message.
+## TODO: use syslog
+priority=$1
+message=$2
+echo "\"$priority - $message\""
+}
+
+PrintMessage() {
+# Display (console) the message, and syslog it too if priority is FIXME: priority to syslog
+priority=$1
+message=$2
+echo "\"($priority) $message\""
+## TODO: filter priority - if match syslog list then syslog it
+## FIXME: for now will syslog anyway
+LogToSyslog "$priority" "$message"
+}
 
 Usage(){
-  echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
+# Print user help
+echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 
 Usage: spki <option> (<subject>) 
 
@@ -63,10 +135,12 @@ Exemples:
 "
 }
 
+## MAIN
+
 case "$1" in
   -init|--init)
     echo "init"
-    CheckEnv
+    #CheckEnv
     InitializeCA
     ;;
   -server|--server)
