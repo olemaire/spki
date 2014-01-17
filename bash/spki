@@ -15,9 +15,31 @@ USER_DAYS=400
 CONFIG_CA="/tmp/root_ca.conf"
 dir=$(cd `dirname $0` && pwd)
 
+CheckEnv(){
+  if [ ! -d datas/ca.db.certs ]; then
+    mkdir datas/ca.db.certs
+  fi
+  if [ ! -f datas/ca.db.serial ]; then
+    echo '01' > datas/ca.db.serial
+  fi
+  if [ ! -f datas/ca.db.index ]; then
+    cp /dev/null datas/ca.db.index
+  fi
+}
+
+InitalizeCA(){
+if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
+  echo "BEWARE : all previous certificates will be erased!" ;
+  echo -e -n "Continue (y/n)? " ;
+  read i ;
+  [ "$i" = "y" ] || exit -1 ;
+fi
+FIXMESTOPPEDHERE
+}
+
 
 Usage(){
-echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
+  echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 
 Usage: spki <option> (<subject>) 
 
@@ -42,39 +64,41 @@ Exemples:
 }
 
 case "$1" in
-    -init|--init)
-	echo "init"
-	;;
-    -server|--server)
-	echo "server $2"
-	;;
-    -user|--user)
-	echo "user $2"
-	;;
-    -verify|--verify)
-	echo "verify $2"
-	;;
-    -renew|--renew)
-	echo "renew $2"
-	;;
-    -revoke|--revoke)
-	echo "revoke $2"
-	;;
-    -crl|--crl)
-	echo "crl"
-	;;
-    -h|-help|--help)
-	Usage
-	;;
-    "")
-	echo "SPKI Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)"
-	echo ""
-	echo "Please RTFM: spki -help"
-	echo ""
-	;;
-    *)
-	echo "SPKI invalid function call (try --help)"
-        exit 127
+  -init|--init)
+    echo "init"
+    CheckEnv
+    InitializeCA
+    ;;
+  -server|--server)
+    echo "server $2"
+    ;;
+  -user|--user)
+    echo "user $2"
+    ;;
+  -verify|--verify)
+    echo "verify $2"
+    ;;
+  -renew|--renew)
+    echo "renew $2"
+    ;;
+  -revoke|--revoke)
+    echo "revoke $2"
+    ;;
+  -crl|--crl)
+    echo "crl"
+    ;;
+  -h|-help|--help)
+    Usage
+    ;;
+  "")
+    echo "SPKI Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)"
+    echo ""
+    echo "Please RTFM: spki -help"
+    echo ""
+    ;;
+  *)
+    echo "SPKI invalid function call (try --help)"
+    exit 127
 esac
 
 # - This Is The End
