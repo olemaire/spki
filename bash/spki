@@ -31,59 +31,131 @@ CONFIG_CA="$dir/private/root_ca.conf"  # where the Certificate Authority OpenSSL
 
 
 ## FUNCTIONS
-CheckEnv(){
-# Check environment - and create directories if not already done.
-if [ ! -d $dir/datas/certs ]; then
-  mkdir $dir/datas/certs || DieLogging 126 "CheckEnv Cannot create $dir/datas/certs directory"
-fi
-if [ ! -f $dir/datas/serial ]; then
-  echo '01' > $dir/datas/serial || DieLogging 126 "CheckEnv cannot create $dir/datas/serial file"
-fi
-if [ ! -f $dir/datas/index ]; then
-  /bin/cp /dev/null $dir/datas/index || DieLogging 126 "CheckEnv cannot create $dir/datas/index file"
-fi
-}
 
 InitializeCA(){
 # Initialize the PKI(CA) elements - warning as purge any existing previous elements
-#if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
-if [ -f $dir/spki ]; then
+if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
   echo "ALERT: all previous existing certificates will be erased!" ;
   echo -e -n "Are your sure you want to continue (y/n)? " ;
   read i ;
   [ "$i" = "y" ] || DieLogging 10 "InializeCA was canceled by user";
 fi
-PrintMessage "notice" "Initializing Certificate Authority"
+PrintMessage "notice" "Initializing Certificate Authority..."
 
-PrintMessage "notice" "-> cleaning existing datas..."
+LogToSyslog "notice" "cleaning existing datas..."
   rm -rf $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
   mkdir $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
 
-PrintMessage "notice" "-> Initializing Random Bits..."
+LogToSyslog "notice" "Initializing Random Bits..."
   /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
 
-PrintMessage "notice" "-> Generating the Certificate Authority private Key"
+LogToSyslog "notice" "Generating the Certificate Authority private Key..."
   sleep 1 
   /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
   chmod 600 $dir/private/ca.key || DieLogging 126 "InitializeCA cannot chmod the Certificate Authority private Key"
 
-PrintMessage "notice" "-> Generating Certificate Authority OpenSSL configuration file"
-#FIXMESTOPPEDHERE
-# FIXME: blog generation
-# I'd like to make them without ampering the script visibility.
-# (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
+LogToSyslog "notice" "Generating Certificate Authority OpenSSL configuration file..."
+  /bin/cat > $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file"
+[ ca ]
+default_ca              = default_CA
+[ default_CA ]
+dir                     = $dir
+certs                   = \$dir/certs
+new_certs_dir           = \$dir/datas/certs
+database                = \$dir/datas/index
+serial                  = \$dir/datas/serial
+RANDFILE                = \$dir/datas/random_bits
+certificate             = \$dir/certs/ca.pem
+private_key             = \$dir/private/ca.key
+default_days            = $SERVER_DAYS
+default_crl_days        = 30
+default_md              = sha1
+preserve                = no
+x509_extensions         = server_cert
+policy                  = policy_anything
+[ policy_match ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+[ policy_anything ]
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+[ server_cert ]
+subjectKeyIdentifier            = hash
+authorityKeyIdentifier          = keyid:always
+extendedKeyUsage                = serverAuth,clientAuth,msSGC,nsSGC
+basicConstraints                = critical,CA:false
+[ req ]
+default_bits                    = $BITS
+dir                             = $dir
+default_keyfile                 = \$dir/private/ca.key
+distinguished_name              = req_distinguished_name
+x509_extensions                 = v3_ca
+string_mask                     = nombstr
+req_extensions                  = v3_req
+[ req_distinguished_name ]
+countryName                     = Country Name (2 letter code)
+countryName_default             = US
+countryName_min                 = 2
+countryName_max                 = 2
+0.organizationName              = Organization Name
+0.organizationName_default      = $COMPANY
+organizationalUnitName          = Security Services
+organizationalUnitName_default  = $COMPANY Security Team
+commonName                      = CA Name
+commonName_default              = $COMPANY Root CA
+commonName_max                  = 64
+[ v3_ca ]
+basicConstraints                = critical,CA:true
+subjectKeyIdentifier            = hash
+keyUsage                        = critical, keyCertSign, cRLSign
+authorityKeyIdentifier          = keyid:always,issuer:always
+nsCertType                      = sslCA, emailCA, objCA
+nsComment                       = "Root CA Certificate"
+# subjectAltName                = email:copy
+[ v3_req ]
+nsCertType                      = objsign,email,server
+[ user_policy ]
+commonName                      = supplied
+emailAddress                    = supplied
+[ user_cert ]
+subjectAltName                  = email:copy
+basicConstraints                = critical,CA:false
+authorityKeyIdentifier          = keyid:always
+extendedKeyUsage                = clientAuth,emailProtection
+EOT
+#FIXME: (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
 
-PrintMessage "notice" "-> Self-signing the Certificate Authority Certificate"
+LogToSyslog "notice" "Self-signing the Certificate Authority Certificate"
   /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
-#FIXME: $CONFIG_CA is not initialiawed yet -> MUST BE DONE !!!!!. -> see above.
 
+LogToSyslog "notice" "Initializing user environment (directories and indexes)"
+  if [ ! -d $dir/datas/certs ]; then
+    mkdir -p $dir/datas/certs || DieLogging 126 "InitializeCA Cannot create $dir/datas/certs directory"
+  fi
+  if [ ! -f $dir/datas/serial ]; then
+    echo '01' > $dir/datas/serial || DieLogging 126 "InitializeCA cannot create $dir/datas/serial file"
+  fi
+  if [ ! -f $dir/datas/index ]; then
+    /bin/cp /dev/null $dir/datas/index || DieLogging 126 "InitializeCA cannot create $dir/datas/index file"
+  fi
+
+PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfully"
 }
 
 DieLogging(){
 # exit with error code and associated message, sysloging too.
 errorcode=$1
 message=$2
-echo "Error Code: $errorcode - cause: $2 - Exiting..."
+echo "Error Code: $errorcode - $2 - Exiting..."
 exit $errorcode
 ##TODO:
 # - syslog (function)
@@ -96,14 +168,14 @@ LogToSyslog() {
 ## TODO: use syslog
 priority=$1
 message=$2
-echo "\"$priority - $message\""
+echo "SYSLOG $priority - $message"
 }
 
 PrintMessage() {
 # Display (console) the message, and syslog it too if priority is FIXME: priority to syslog
 priority=$1
 message=$2
-echo "\"($priority) $message\""
+echo "($priority) $message"
 ## TODO: filter priority - if match syslog list then syslog it
 ## FIXME: for now will syslog anyway
 LogToSyslog "$priority" "$message"
@@ -140,7 +212,6 @@ Exemples:
 case "$1" in
   -init|--init)
     echo "init"
-    #CheckEnv
     InitializeCA
     ;;
   -server|--server)
