@@ -10,6 +10,7 @@ Return Code | Meaning                           | Observations
 0           | command was perfomed with success | 
 1-2         | Bash reserved                     | See [Bash Return Codes] 
 10          | Operation Aborted by user         | ex: answering no to a confirmation and exiting
+11          | CA not initialized                | ex: trying an operation before the CA has been initalized
 66          | OpenSSL error                     | ex: OpenSSL misused or cannot perform
 126-165     | Bash reserved                     | See [Bash Return Codes]
 255         | Bash reserved                     | See [Bash Return Codes]
