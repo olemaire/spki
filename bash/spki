@@ -11,8 +11,8 @@
 DOMAIN=senso-rezo.org            # Domain name that will appear by default: change it by your company domain name
 COMPANY="Senso/Rezo"             # Company name that will appear by default: change it by your company name
 BITS=4096                        # Random bits used
-SERVER_DAYS=7300                 # Server certificate will be vailid (new, renewed) for this period (nearly 20 years...)
-USER_DAYS=400                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
+SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
+USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 
 
 # SPKI internal variables - should not be changed
