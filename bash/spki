@@ -14,6 +14,7 @@ supportmail="sysadm"             # The Support Email address used for server cer
 BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
 USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
+CRL_DAYS=31                      # Days between each CRL is due
 
 
 # SPKI internal variables - should not be changed
@@ -171,6 +172,9 @@ LogToSyslog "info" "Initializing user environment (directories and indexes)..."
     /bin/cp /dev/null $dir/datas/index || DieLogging 126 "InitializeCA cannot create $dir/datas/index file"
   fi
 
+LogToSyslog "info" "Issuing the first Certificate Revocation List"
+  GenerateCRL || DieLogging 126 "InitializeCA cannot generate its first CRL"
+
 PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfully."
 }
 
@@ -287,10 +291,8 @@ LogToSyslog "info" "Generating CSR for subject $subject..."
 LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
   /usr/bin/openssl ca -config $CONFIG_CA -days $certdays -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot make the CSR signed by the CA for subject $subject"
 LogToSyslog "info" "Extracting certificate for subject $subject..."
-  /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 12 "GenerateCert cannot extract certificate for subject $subject" #FIXME: ErrorCode 12? sure?
+  /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
 LogToSyslog "info" "Verifying certificate for $subject..."
-  #/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot verify certificate for subject $subject" 
-  #FIXME: use VerifyCert ?
   VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (INVALID) for subject $subject"
 PrintMessage "info" "Certificate ($certtype) generated for $subject"
 PrintMessage "info" " -> CA certificate: $dir/certs/ca.pem"
@@ -299,11 +301,31 @@ PrintMessage "info" " -> Subject private key: $dir/keys/$subject.key"
 PrintMessage "info" "Have a nice day."
 }
 
+GenerateCRL() {
+# Will generate a new CRL
+LogToSyslog "info" "Generating a new CRL..."
+  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
+  /usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
+LogToSyslog "info" "A new CRL has been generated"
+}
+
+RevokeCert() {
+# Will revoke the certificate for subject $1 (must exists - see CheckIfExists)
+local subject=$1
+CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
+LogToSyslog "info" "Revoking certificate for subject $subject..."
+  /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+PrintMessage "info" "Certificate for subject $subject has been revoked"
+}
+
 VerifyCert() {
 # Will verify certificate for subjet $1 (must exists - see CheckIfExist)
 local subject=$1
+CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
+
 local result=$(/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regex=".*$subject.pem: OK\$"
+
 if [[ $result =~ $regex ]]; then
   LogToSyslog "info" "VerifyCert check OK: $result"
   return 0
@@ -319,8 +341,8 @@ local errorcode=$1
 local message=$2
 echo "Error Code: $errorcode - $message - Exiting..."
 case "$errorcode" in
-  0)
-    LogToSyslog "notice" "(notice) - nobody should die with exit return code 0 - called with message $message"
+  0|100)
+    LogToSyslog "notice" "(notice) - nobody should die with exit return code 0 or 100 - called with message $message"
     ;;
   10|11|12|13|14)
     LogToSyslog "notice" "$message"
@@ -389,7 +411,7 @@ Exemples:
 	spki -user olivier.lemaire@senso-rezo.org
 	spki -revoke www.senso-rezo.org
 	spki -renew olivier.lemaire@senso-rezo.org
-	spki crl
+	spki -crl
 
 "
 }
@@ -418,7 +440,6 @@ case "$1" in
     ;;
   -verify|--verify|verify)
     CheckEnv 
-    CheckIfExist $2 || DieLogging 13 "Subject $2 does not exists!"
     if VerifyCert $2 ; then
       echo "Certificate for $2 is VALID"
       exit 0
@@ -429,22 +450,21 @@ case "$1" in
     ;;
   -renew|--renew|renew)
     CheckEnv
-    echo "renew $2"
-    echo "Not Implemented yet"
+    echo "renew $2 - Not Implemented yet"
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
-    echo "revoke $2"
-    echo "Not Implemented yet"
+    echo "Revoking certificate for $2" ; RevokeCert $2
+    echo "Generating a new CRL.." ; GenerateCRL
+    echo "A new CRL has been generated to report the revocal of certificate for $2"
     ;;
   -crl|--crl|crl)
     CheckEnv
-    echo "crl"
-    echo "Not Implemented yet"
+    GenerateCRL
+    echo "A new CRL has been generated"
     ;;
   -status|--status|status)
-    echo "status"
-    echo "Not Implemented yet"
+    echo "status - Not Implemented yet"
     ;;
   -h|-help|--help|help)
     Usage
@@ -461,5 +481,5 @@ esac
 
 # TODO:
 # 	- server,user : does CheckIfExist cannot be factorised at the begining of GenerateCert (instead of being called at the end twice) ? 
-#	- verify: does CheckIfExist cannot be factorised at the begining of VerifyCert (instead of long command at the end) ?
+#	- verify : verify also agains CRL for revoked certificate (for now, won't tell invalid revoked certificates!)
 # - This Is The End

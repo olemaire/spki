@@ -12,7 +12,7 @@ Return Code | Meaning                           | Observations
 10          | Operation Aborted by user         | ex: answering no to a confirmation and exiting
 11          | CA not initialized                | ex: trying an operation before the CA has been initalized
 12          | Illegal function call             | ex: calling SPKI with unknown function
-13          | Element does not exists           | ex: trying to verify a non existent certificate
+13          | Element does not exists           | ex: trying to revoke a non existent certificate
 14          | Element already exists            | ex: trying to generate a certificate that already exists (and have not been revoked yet)
 66          | OpenSSL error                     | ex: OpenSSL misused or cannot perform
 100         | Certificate is Invalid            | ex: verifying an invalid certificate
