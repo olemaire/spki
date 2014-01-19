@@ -54,19 +54,19 @@ if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
 fi
 PrintMessage "notice" "Initializing Certificate Authority asked by user so let's go..."
 
-LogToSyslog "notice" "cleaning existing datas..."
+LogToSyslog "info" "cleaning existing datas..."
   rm -rf $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
   mkdir $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
 
-LogToSyslog "notice" "Initializing Random Bits..."
+LogToSyslog "info" "Initializing Random Bits..."
   /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
 
-LogToSyslog "notice" "Generating the Certificate Authority private Key..."
+LogToSyslog "info" "Generating the Certificate Authority private Key..."
   sleep 1 
   /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
   chmod 600 $dir/private/ca.key || DieLogging 126 "InitializeCA cannot chmod the Certificate Authority private Key"
 
-LogToSyslog "notice" "Generating Certificate Authority OpenSSL configuration file..."
+LogToSyslog "info" "Generating Certificate Authority OpenSSL configuration file..."
   /bin/cat > $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file"
 [ ca ]
 default_ca              = default_CA
@@ -146,10 +146,10 @@ extendedKeyUsage                = clientAuth,emailProtection
 EOT
 #FIXME: (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
 
-LogToSyslog "notice" "Self-signing the Certificate Authority Certificate..."
+LogToSyslog "info" "Self-signing the Certificate Authority Certificate..."
   /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
 
-LogToSyslog "notice" "Initializing user environment (directories and indexes)..."
+LogToSyslog "info" "Initializing user environment (directories and indexes)..."
   if [ ! -d $dir/datas/certs ]; then
     mkdir -p $dir/datas/certs || DieLogging 126 "InitializeCA Cannot create $dir/datas/certs directory"
   fi
