@@ -8,9 +8,10 @@
 # spki - spki core util (command line)
 
 # user/context variables - have to be changed depending on user/context
-DOMAIN=senso-rezo.org            # Domain name that will appear by default: change it by your company domain name
+DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
 COMPANY="Senso/Rezo"             # Company name that will appear by default: change it by your company name
-BITS=4096                        # Random bits used
+supportmail="sysadm"             # The Support Email address used for server certiciates
+BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
 USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 
@@ -162,6 +163,112 @@ LogToSyslog "notice" "Initializing user environment (directories and indexes)...
 PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfully."
 }
 
+CheckSubject() {
+# Check if $2 (subject) is a valid subject (server fqdn or email) depending on type (server=fqdn,user=email) - if ok return 0, else return 1
+#FIXME: could be mapped function $subject $type
+#FIXME: type could be "user,server" to be factorisable with GenerateCert (see FIXME in GenerateCert)
+local checktype=$1
+local subject=$2
+case "$checktype" in
+  fqdn)
+    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*\$" #FIXME: wildcard not supported with this regexp
+  ;;
+  email)
+    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+  ;;
+  *)
+    DieLogging 12 "Illegal function call: CheckSubject with type $checktype"
+esac
+if [[ $subject =~ $regex ]]; then
+  return 0
+else
+  return 1
+fi
+}
+
+GenerateOpenSSLConf() {
+# Will generate adequate OpenSSL configuration file for signing
+local conftype=$1
+local subject=$2
+case "$conftype" in
+  server)
+    local commonname="Common Name (ex:ldap.$DOMAIN)"
+    local emailaddress="Server Administrator email address"
+    local emailaddressdefault="$supportemail@$DOMAIN"
+    local extendedkeyusage="serverAuth, clientAuth"
+    local nscerttype="server"
+    ;;
+  user)
+    local commonname="Common Name (ex: john.doe@$DOMAIN)"
+    local emailaddress="User email address"
+    local emailaddressdefault="$subject"
+    local extendedkeyusage="clientAuth"
+    local nscerttype="client,email"
+    ;;
+  *)
+    DieLogging 12 "Illegal function call: GenerateOpenSSLConf with type $conftype"
+esac
+#FIXME: (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
+local $OPENSSL_CONFIG="$dir/certs/$subject.conf"
+cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
+# OpenSSL configuration filed use to generate a certificate for $subject
+[ req ]
+default_bits        = $BITS
+default_keyfile     = keys/$subject.key
+default_md          = sha1
+distinguished_name  = req_distinguished_name
+x509_extension      = cert_req
+string_mask         = nombstr
+
+[ req_distinguished_name ]
+countryName                     = Country Name (2 letter code)
+countryName_default             = US
+countryName_min                 = 2
+countryName_max                 = 2
+organizationName                = Organization Name
+organizationName_default        = $COMPANY
+organizationalUnitName          = Certificate Organization
+organizationalUnitName_default  = $COMPANY Security Team
+commonName                      = $commonname
+commonName_default              = $subject
+commonName_max                  = 64
+emailAddress                    = $emailaddress
+emailAddress_default            = $emailaddressdefault
+emailAddress_max                = 64
+
+[ cert_req ]
+basicConstraints      = critical, CA:false
+subjectKeyIdentifier  = hash
+keyUsage              = digitalSignature, keyEncipherment
+extendedKeyUsage      = $extendedkeyusage
+nsCertType            = $nscerttype
+nsComment             = "SPKI - $COMPANY"
+# subjectAltName      = email:copy
+EOT
+}
+
+GenerateCert() {
+# Will generate a server of type "type" for subject "$2"
+local certtype=$1
+local subject=$2
+case "$certtype" in
+  server)
+    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)"
+    GenerateOpenSSLConf "server" "$subject" 
+    #FIXME: CheckSubject could be used once if type are user,server (and not email,fqdn) - see FIXME in CheckSubject
+  ;;
+  user)
+    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid email ($subject)"
+    GenerateOpenSSLConf "user" "$subject" 
+    #FIXME: CheckSubject could be used once if type are user,server (and not email,fqdn) - see FIXME in CheckSubject
+  ;;
+  *)
+    DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
+esac
+echo "Let's generate a $certtype certificate for user $subject"
+#FIXMESTOPPEDHERE
+}
+
 DieLogging(){
 # exit with error code and associated message, sysloging too.
 local errorcode=$1
@@ -171,7 +278,7 @@ case "$errorcode" in
   0)
     LogToSyslog "notice" "(notice) - nobody should die with exit return code 0 - called with message $message"
     ;;
-  10|11|127)
+  10|11|12)
     LogToSyslog "notice" "$message"
     ;;
   66)
@@ -183,9 +290,6 @@ case "$errorcode" in
   *)
     LogToSyslog "notice" "(notice) - Unknown Error Code - $errorcode - called with message $message"
 esac
-##TODO:
-# - syslog (function)
-# - printing error code associated message (see doc/ReturnCodes.md)
 exit $errorcode
 }
 
@@ -233,6 +337,7 @@ Available options are:
     -renew <email,fqdn>		 Renew a given certificate.
     -revoke <email,fqdn>	 Revoke a given certificate.
     -crl			 Generate a Certificate Revocation List.
+    -status                      Will give information on the SPKI status
     -help                        Display this short help message.
 
 Exemples:
@@ -253,27 +358,39 @@ case "$1" in
     ;;
   -server|--server|server)
     CheckEnv
+    GenerateCert "server" $2
     echo "server $2"
+    echo "Not Implemented yet"
     ;;
   -user|--user|user)
     CheckEnv
+    GenerateCert "user" $2
     echo "user $2"
+    echo "Not Implemented yet"
     ;;
   -verify|--verify|verify)
     CheckEnv #FIXME: verify we need CheckEnv there
     echo "verify $2"
+    echo "Not Implemented yet"
     ;;
   -renew|--renew|renew)
     CheckEnv #FIXME: verify we need CheckEnv there
     echo "renew $2"
+    echo "Not Implemented yet"
     ;;
   -revoke|--revoke|revoke)
     CheckEnv #FIXME: verify we need CheckEnv there
     echo "revoke $2"
+    echo "Not Implemented yet"
     ;;
   -crl|--crl|crl)
     CheckEnv #FIXME: verify we need CheckEnv there
     echo "crl"
+    echo "Not Implemented yet"
+    ;;
+  -status|--status|status)
+    echo "status"
+    echo "Not Implemented yet"
     ;;
   -h|-help|--help|help)
     Usage
@@ -285,7 +402,7 @@ case "$1" in
     echo ""
     ;;
   *)
-    DieLogging 127 "SPKI invalid function call \"$1\" (try --help)"
+    DieLogging 12 "SPKI invalid function call \"$1\" (try --help)"
 esac
 
 # - This Is The End
