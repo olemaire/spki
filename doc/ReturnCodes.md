@@ -25,13 +25,13 @@ The same return codes will be used for the Bash and the Perl flavors of **SPKI**
 
 Severity Level | Meaning | Observations
 :------------- | :------ | :------------ 
-emerg          |         | 
-alert          | FIXME TO BE FINISHED
-crit           |
-err(or)        |
-warn(ing)      |
-notice         |
-info           |
-debug          |
+emerg          | | panic condition that need immediate action from the staff.
+alert          | | alerting that need immediate action.
+crit           | | critical failure that need immediate action.
+err(or)        | | non urgent failure.
+warn(ing)      | | not an error, but action required to check everything is okay.
+notice         | | unusual condition, have to be reported to admin and/or developers to spot potential problems. No immediate action required.
+info           | | normal operation message, no action requiered.
+debug          | | debut level message.
 
 The same return facility and severity levels will be used for the Bash and the Perl flavors of **SPKI**.
