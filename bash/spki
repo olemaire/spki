@@ -33,16 +33,27 @@ loggerchan="daemon"                    # Facitily used for messages within syslo
 
 
 ## FUNCTIONS
-CheckEnv(){
+CheckEnv() {
 # Check if the CA is operational
-if [ ! -f certs/ca.pem ] || [ ! -f private/ca.key ]; then
+if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ]; then
   PrintMessage "info" "Check CA Environment reveal no pre-existing CA"
   echo "Please run '$0 --init' to initalize a new Certificate Authority"
   DieLogging 11 "The Certificate Authority has not (yet) been Initialized"
 fi
 }
 
-InitializeCA(){
+CheckIfExist() {
+# Check it the subject already exists - return 0 if exists, 1 if not
+local subject=$1
+if [ ! -f $dir/certs/$subject.pem ]; then
+  return 1
+else
+  return 0
+fi
+}
+
+
+InitializeCA() {
 # Initialize the PKI(CA) elements - warning as purge any existing previous elements
 LogToSyslog "notice" "Initialization of a Certificate Authority triggered"
 if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
@@ -278,7 +289,9 @@ LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
 LogToSyslog "info" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 12 "GenerateCert cannot extract certificate for subject $subject" #FIXME: ErrorCode 12? sure?
 LogToSyslog "info" "Verifying certificate for $subject..."
-  /usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem || DieLogging 12 "GenerateCert cannot verify certificate for subject $subject" #FIXME: ErrorCode 12? sure?
+  #/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot verify certificate for subject $subject" 
+  #FIXME: use VerifyCert ?
+  VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (INVALID) for subject $subject"
 PrintMessage "info" "Certificate ($certtype) generated for $subject"
 PrintMessage "info" " -> CA certificate: $dir/certs/ca.pem"
 PrintMessage "info" " -> Subject certificate: $dir/certs/$subject.pem"
@@ -286,7 +299,21 @@ PrintMessage "info" " -> Subject private key: $dir/keys/$subject.key"
 PrintMessage "info" "Have a nice day."
 }
 
-DieLogging(){
+VerifyCert() {
+# Will verify certificate for subjet $1 (must exists - see CheckIfExist)
+local subject=$1
+local result=$(/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
+local regex=".*$subject.pem: OK\$"
+if [[ $result =~ $regex ]]; then
+  LogToSyslog "info" "VerifyCert check OK: $result"
+  return 0
+else 
+  LogToSyslog "info" "VerifyCert check INVALID: $result"
+  return 1
+fi
+}
+
+DieLogging() {
 # exit with error code and associated message, sysloging too.
 local errorcode=$1
 local message=$2
@@ -295,7 +322,7 @@ case "$errorcode" in
   0)
     LogToSyslog "notice" "(notice) - nobody should die with exit return code 0 - called with message $message"
     ;;
-  10|11|12)
+  10|11|12|13|14)
     LogToSyslog "notice" "$message"
     ;;
   66)
@@ -340,7 +367,7 @@ if [ $priority != "info" ]; then
 fi
 }
 
-Usage(){
+Usage() {
 # Print user help
 echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 
@@ -375,29 +402,43 @@ case "$1" in
     ;;
   -server|--server|server)
     CheckEnv
-    GenerateCert "server" $2
+    if CheckIfExist $2 ; then
+      DieLogging 14 "Trying to generate a server certificate that already exists ($2)"
+    else
+      GenerateCert "server" $2
+    fi
     ;;
   -user|--user|user)
     CheckEnv
-    GenerateCert "user" $2
+    if CheckIfExist $2 ; then
+      DieLogging 14 "Trying to generate a user certificate that already exists ($2)"
+    else
+      GenerateCert "user" $2
+    fi
     ;;
   -verify|--verify|verify)
-    CheckEnv #FIXME: verify we need CheckEnv there
-    echo "verify $2"
-    echo "Not Implemented yet"
+    CheckEnv 
+    CheckIfExist $2 || DieLogging 13 "Subject $2 does not exists!"
+    if VerifyCert $2 ; then
+      echo "Certificate for $2 is VALID"
+      exit 0
+    else
+      echo "Certificate for $2 is INVALID"
+      exit 100
+    fi
     ;;
   -renew|--renew|renew)
-    CheckEnv #FIXME: verify we need CheckEnv there
+    CheckEnv
     echo "renew $2"
     echo "Not Implemented yet"
     ;;
   -revoke|--revoke|revoke)
-    CheckEnv #FIXME: verify we need CheckEnv there
+    CheckEnv
     echo "revoke $2"
     echo "Not Implemented yet"
     ;;
   -crl|--crl|crl)
-    CheckEnv #FIXME: verify we need CheckEnv there
+    CheckEnv
     echo "crl"
     echo "Not Implemented yet"
     ;;
@@ -418,4 +459,7 @@ case "$1" in
     DieLogging 12 "SPKI invalid function call \"$1\" (try --help)"
 esac
 
+# TODO:
+# 	- server,user : does CheckIfExist cannot be factorised at the begining of GenerateCert (instead of being called at the end twice) ? 
+#	- verify: does CheckIfExist cannot be factorised at the begining of VerifyCert (instead of long command at the end) ?
 # - This Is The End
