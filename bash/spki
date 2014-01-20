@@ -67,24 +67,26 @@ if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
   read i ;
   [ "$i" = "y" ] || DieLogging 10 "InializeCA was canceled by user";
 fi
-PrintMessage "notice" "Initializing Certificate Authority asked by user so let's go..."
+PrintMessage "notice" "Initializing Root Certificate Authority for $COMPANY:"
 
 LogToSyslog "info" "cleaning existing datas..."
-  rm -rf $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
-  mkdir $dir/{certs,csr,datas,keys,private,p12,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
+  rm -rf $dir/{certs,csr,datas,keys,private,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
+  mkdir $dir/{certs,csr,datas,keys,private,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
 
-LogToSyslog "info" "Initializing Random Bits..."
-  /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
-
-LogToSyslog "info" "Generating the Certificate Authority private Key..."
+LogToSyslog "info" "Generating the Certificate Authority signing environment..."
   sleep 1 
   case "$automated" in
     yes|on)
-      LogToSyslog "info" "-> automated mode is on..."
-      /usr/bin/openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+      PrintMessage "info" "Automated mode is ON..."
+      PrintMessage "info" "Initializing Random Bits..."
+      /usr/bin/openssl rand $BITS > $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 126 "InitializeCA cannot create Random Bits"
+      PrintMessage "info" "Generating the Certificate Authority private Key..."
+      /usr/bin/openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
     no|not|off)
-      LogToSyslog "info" "-> automated mode is off..."
+      PrintMessage "info" "Automated mode is OFF..."
+      /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
+      PrintMessage "info" "Generating the Certificate Authority private Key..."
       /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
     *)
@@ -204,10 +206,10 @@ EOT
     DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
 esac
 
-LogToSyslog "info" "Self-signing the Certificate Authority Certificate..."
+PrintMessage "info" "Self-signing the Certificate Authority Certificate..."
   /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
 
-LogToSyslog "info" "Initializing user environment (directories and indexes)..."
+PrintMessage "info" "Initializing user environment (directories and indexes)..."
   if [ ! -d $dir/datas/certs ]; then
     mkdir -p $dir/datas/certs || DieLogging 126 "InitializeCA Cannot create $dir/datas/certs directory"
   fi
@@ -407,21 +409,33 @@ LogToSyslog "info" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
 LogToSyslog "info" "Verifying certificate for $subject..."
   VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (INVALID) for subject $subject"
-PrintMessage "info" "Certificate ($certtype) generated for $subject"
-PrintMessage "info" " -> CA certificate: $dir/certs/ca.pem"
-PrintMessage "info" " -> Subject certificate: $dir/certs/$subject.pem"
-PrintMessage "info" " -> Subject private key: $dir/keys/$subject.key"
+PrintMessage "info" "Certificate ($certtype) generated for $subject:"
+PrintMessage "info" " - CA certificate: $dir/certs/ca.pem"
+PrintMessage "info" " - Subject certificate: $dir/certs/$subject.pem"
+PrintMessage "info" " - Subject private key: $dir/keys/$subject.key"
 PrintMessage "info" "Have a nice day."
 }
 
 GenerateCRL() {
 # Will generate a new CRL
-echo "Generating a new CRL.."
-LogToSyslog "info" "Generating a new CRL..."
-  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
-  # FIXME: seems not needed unless wanting to publish outside (which should be done at the end using a "publish" function?) - to be seen when crl distribution point (see #5)
-  #/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
-  /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
+PrintMessage "info" "Generating a new CRL..."
+case "$automated" in
+  yes|on)
+    /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "GenerateCRL cannot generate a new CRL"
+    ;;
+  no|not|off)
+    /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
+    ;;
+  *)
+    DieLogging 12 "GenerateCRL called in an unsupported automated mode ($automated)"
+esac
+# FIXME: seems not needed unless wanting to publish outside (which should be done at the end using a "publish" function?)
+#         to be seen when crl distribution point (see #5)
+#/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
+
+
+/usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
+
 LogToSyslog "info" "A new CRL has been generated and CRL directory rehashed"
 
 }
@@ -574,10 +588,31 @@ PrintMessage() {
 # Display (console) the message, and syslog it too if not "info" priority
 local priority=$1
 local message=$2
-echo "($priority) $message"
-if [ $priority != "info" ]; then
-  LogToSyslog "$priority" "$message"
-fi
+case "$priority" in
+  info)
+    echo "----> $message"
+    ;;
+  notice)
+    echo "##### $message"
+    LogToSyslog "$priority" "$message"
+    ;;
+  warn|warning|crit)
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "!!!!! $message"
+    LogToSyslog "$priority" "$message"
+    ;;
+  emerg)
+    echo "********************************************************************"
+    echo "********************************************************************"
+    echo "********************************************************************"
+    echo "*****"
+    echo "***** $message"
+    LogToSyslog "$priority" "$message"
+    ;;
+  *)
+    echo "????($priority)???? $message"
+    LogToSyslog "notice" "PrintMessage called with an unsupported priority ($priority)"
+esac
 }
 
 Usage() {
@@ -679,4 +714,6 @@ case "$1" in
     DieLogging 12 "SPKI invalid function call \"$1\" (try --help)"
 esac
 
+# TODO:
+# * check automated mode at startup - and die if not supported -> will reduce DieLogging 12 in tons of case $automated..
 # - This Is The End

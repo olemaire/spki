@@ -51,7 +51,50 @@ For now, two types of certificates are delivered:
 ## Automatic mode
 In Automated mode, the usage is pretty straight and forward, and assume you know what you want to and want it done at light speed, even from a external script (for **SPKI** integration in broader system). 
 
+### First: Initialize your Certificate Authority
+
 The first step, after configuration, is to initialise the Certificate Authorithy:
+
+    me@localhost:~/github/spki/bash$ ./spki --init
+    ##### Initializing Root Certificate Authority for Senso-Rezo:
+    ----> Automated mode is ON...
+    ----> Initializing Random Bits...
+    ----> Generating the Certificate Authority private Key...
+    ----> Self-signing the Certificate Authority Certificate...
+    ----> Initializing user environment (directories and indexes)...
+    ----> Generating a new CRL...
+    ##### Senso-Rezo Root Certificate Authority initialized successfully.
+    me@localhost:~/github/spki/bash$
+    
+Congratulations, you PKI si ready to serve. To make sure:
+
+    me@localhost:~/github/spki/bash$ ./spki --status
+    OK
+    me@localhost:~/github/spki/bash$ echo $?
+    0
+    me@localhost:~/github/spki/bash$
+    
+Ok, feel good, but what about that PKI? Just ask:
+
+    me@localhost:~/github/spki/bash$ ./spki --info
+    General info on the Certificate Authority:
+    ------------------------------------------
+    Cryptographic Engine:                       OpenSSL 0.9.8y 5 Feb 2013
+    Certificate Authority DN:                   C=US/O=Senso-Rezo/OU=Senso-Rezo Security Services/CN=Senso-Rezo Root CA
+    Start Validity on:                          Jan 20 22:23:28 2014 GMT
+    End Validity on:                            Jan 21 22:23:28 2034 GMT
+    Issued certificates Valid/Revoked/Expired:  0 / 0 / 0
+    Last CRL produced on:                       Jan 20 22:23:28 2014 GMT
+    Next CRL to be produced on:                 Feb 20 22:23:28 2014 GMT
+    Current Status:                             OK
+    
+    me@localhost:~/github/spki/bash$
+
+Ok, you've got a PKI ready to deliver certificates...
+
+### Then, let's manage Certificates
+
+To generate a certificate, just ask the correct type: *server* or *user* are the only type managed so far. To generate somes:
 
 
 ## The Manual Way
