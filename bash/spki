@@ -8,8 +8,9 @@
 # spki - spki core util (command line)
 
 # user/context variables - have to be changed depending on user/context
+COUNTRY="US"                     # Country Code you want to registrer the PKI to (must be 2 letter country code)
 DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
-COMPANY="Senso/Rezo"             # Company name that will appear by default: change it by your company name
+COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
 supportmail="sysadm"             # The Support Email address used for server certiciates
 BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
@@ -98,6 +99,7 @@ default_days            = $SERVER_DAYS                                      # Ho
 default_crl_days        = $CRL_DAYS                                         # How long a CRL is due 
 default_md              = sha1                                              # MD to use
 preserve                = no                                                # Keep passed DN ordering
+name_opt                = multiline,-esc_msb,utf8                           # Display UTF-8 characters
 x509_extensions         = server_cert
 policy                  = policy_anything
 [ policy_match ]
@@ -120,26 +122,22 @@ subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = serverAuth,clientAuth,msSGC,nsSGC
 basicConstraints                = critical,CA:false
+nsComment                       = "SPKI $COMPANY Server Certificate"
 [ req ]
 default_bits                    = $BITS
 dir                             = $dir
 default_keyfile                 = $dir/private/ca.key
+utf8                            = yes                                      # Input are dealt as UTF-8
+prompt                          = no                                       # Do not prompt for DN while managing CSR
 distinguished_name              = req_distinguished_name
 x509_extensions                 = v3_ca
-string_mask                     = nombstr
+string_mask                     = utf8only                                 # Emit UTF-8 Strings
 req_extensions                  = v3_req
 [ req_distinguished_name ]
-countryName                     = Country Name (2 letter code)
-countryName_default             = US
-countryName_min                 = 2
-countryName_max                 = 2
-0.organizationName              = Organization Name
-0.organizationName_default      = $COMPANY
-organizationalUnitName          = Security Services
-organizationalUnitName_default  = $COMPANY Security Team
-commonName                      = CA Name
-commonName_default              = $COMPANY Root CA
-commonName_max                  = 64
+countryName                     = "$COUNTRY"
+organizationName                = "$COMPANY"
+organizationalUnitName          = "$COMPANY Security Services"
+commonName                      = "$COMPANY Root CA"
 [ v3_ca ]
 basicConstraints                = critical,CA:true
 subjectKeyIdentifier            = hash
@@ -158,8 +156,8 @@ subjectAltName                  = email:copy
 basicConstraints                = critical,CA:false
 authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = clientAuth,emailProtection
+nsComment                       = "SPKI $COMPANY User Certificate"
 EOT
-#FIXME: (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
 
 LogToSyslog "info" "Self-signing the Certificate Authority Certificate..."
   /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
@@ -186,8 +184,6 @@ PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfu
 
 CheckSubject() {
 # Check if $2 (subject) is a valid subject (server fqdn or email) depending on type (server=fqdn,user=email) - if ok return 0, else return 1
-#FIXME: could be mapped function $subject $type
-#FIXME: type could be "user,server" to be factorisable with GenerateCert (see FIXME in GenerateCert)
 local checktype=$1
 local subject=$2
 LogToSyslog "info" "Checking if $subject if of type $checktype..."
@@ -215,15 +211,11 @@ local subject=$2
 LogToSyslog "info" "Generating OpenSSL $conftype config file for subject $subject..."
 case "$conftype" in
   server)
-    local commonname="Common Name (ex:ldap.$DOMAIN)"
-    local emailaddress="Server Administrator email address"
     local emailaddressdefault="$supportmail@$DOMAIN"
     local extendedkeyusage="serverAuth, clientAuth"
     local nscerttype="server"
     ;;
   user)
-    local commonname="Common Name (ex: john.doe@$DOMAIN)"
-    local emailaddress="User email address"
     local emailaddressdefault="$subject"
     local extendedkeyusage="clientAuth"
     local nscerttype="client,email"
@@ -231,7 +223,7 @@ case "$conftype" in
   *)
     DieLogging 12 "Illegal function call: GenerateOpenSSLConf with type $conftype"
 esac
-#FIXME: (btw, perhaps a good thing to keep the confs for users and servers certes - not in the same directory as certs/ but confs/ - just to be sure to keep the history in case the admin modify the conf while the PKI life?)
+
 local OPENSSL_CONFIG="$dir/certs/$subject.conf"
 cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
 # OpenSSL configuration filed use to generate a certificate for $subject
@@ -239,25 +231,17 @@ cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create
 default_bits        = $BITS
 default_keyfile     = $dir/keys/$subject.key
 default_md          = sha1
+utf8                = yes
+prompt              = no
 distinguished_name  = req_distinguished_name
 x509_extension      = cert_req
-string_mask         = nombstr
+string_mask         = utf8only
 
 [ req_distinguished_name ]
-countryName                     = Country Name (2 letter code)
-countryName_default             = US
-countryName_min                 = 2
-countryName_max                 = 2
-organizationName                = Organization Name
-organizationName_default        = $COMPANY
-organizationalUnitName          = Certificate Organization
-organizationalUnitName_default  = $COMPANY Security Team
-commonName                      = $commonname
-commonName_default              = $subject
-commonName_max                  = 64
-emailAddress                    = $emailaddress
-emailAddress_default            = $emailaddressdefault
-emailAddress_max                = 64
+countryName                     = "$COUNTRY"
+organizationName                = "$COMPANY"
+commonName                      = $subject
+emailAddress                    = $emailaddressdefault
 
 [ cert_req ]
 basicConstraints      = critical, CA:false
@@ -265,6 +249,7 @@ subjectKeyIdentifier  = hash
 keyUsage              = digitalSignature, keyEncipherment
 extendedKeyUsage      = $extendedkeyusage
 nsCertType            = $nscerttype
+nsComment             = "SPKI $COMPANY Certificate"
 EOT
 }
 
@@ -272,19 +257,25 @@ GenerateCert() {
 # Will generate a server of type "type" for subject "$2"
 local certtype=$1
 local subject=$2
+
+if CheckIfExist $subject ; then
+  DieLogging 14 "GenerateCert: Trying to generate a $certtype certificate whic already exists ($subject)"
+fi
+
+
 LogToSyslog "info" "User asked to Generate a certificate for subject $subject with type $certtype"
 case "$certtype" in
   server)
     CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)"
     GenerateOpenSSLConf "server" "$subject" 
-    #FIXME: CheckSubject could be used once if type are user,server (and not email,fqdn) - see FIXME in CheckSubject
     local certdays=$SERVER_DAYS
+    local extensions="server_cert"
   ;;
   user)
     CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)"
     GenerateOpenSSLConf "user" "$subject" 
-    #FIXME: CheckSubject could be used once if type are user,server (and not email,fqdn) - see FIXME in CheckSubject
     local certdays=$USER_DAYS
+    local extensions="user_cert"
   ;;
   *)
     DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
@@ -295,7 +286,7 @@ LogToSyslog "info" "Generating keys for subject $subject..."
 LogToSyslog "info" "Generating CSR for subject $subject..."
   /usr/bin/openssl req -new -config $dir/certs/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
 LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
-  /usr/bin/openssl ca -config $CONFIG_CA -days $certdays -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot make the CSR signed by the CA for subject $subject"
+  /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
 LogToSyslog "info" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
 LogToSyslog "info" "Verifying certificate for $subject..."
@@ -309,6 +300,7 @@ PrintMessage "info" "Have a nice day."
 
 GenerateCRL() {
 # Will generate a new CRL
+echo "Generating a new CRL.."
 LogToSyslog "info" "Generating a new CRL..."
   /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
   /usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
@@ -333,7 +325,7 @@ case "$reason" in
     LogToSyslog "notice" "RevokeCert: unknown reason ($reason) given for revocation, defaulting to unspecified" 
     local revocation_reason="unspecified"
 esac
-
+echo "Revoking certificate for $subject (reason = $revocation_reason)"
 LogToSyslog "info" "Revoking certificate for subject $subject for reason $revocation_reason..."
   /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
 PrintMessage "info" "Certificate for subject $subject has been revoked"
@@ -346,6 +338,10 @@ CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
 local result=$(/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regex=".*$subject.pem: OK\$"
+
+#FIXME: for now, VerifCert does not check agains Revocation status... but it should.
+#       With OpenSSL 1.0.1y (and counting), the verify --CRLfile file.pem could do (undocumented but working option)
+#       But most of the 2011-2014 systems are still shipped with OpenSSL 0.9.8y ... so, need to find a generic way
 
 if [[ $result =~ $regex ]]; then
   LogToSyslog "info" "VerifyCert check OK: $result"
@@ -493,19 +489,11 @@ case "$1" in
     ;;
   -server|--server|server)
     CheckEnv
-    if CheckIfExist $2 ; then
-      DieLogging 14 "Trying to generate a server certificate that already exists ($2)"
-    else
-      GenerateCert "server" $2
-    fi
+    GenerateCert "server" $2
     ;;
   -user|--user|user)
     CheckEnv
-    if CheckIfExist $2 ; then
-      DieLogging 14 "Trying to generate a user certificate that already exists ($2)"
-    else
-      GenerateCert "user" $2
-    fi
+    GenerateCert "user" $2
     ;;
   -verify|--verify|verify)
     CheckEnv 
@@ -523,9 +511,7 @@ case "$1" in
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
-    echo "Revoking certificate for $2" ; RevokeCert $2 $3
-    echo "Generating a new CRL.." ; GenerateCRL
-    echo "A new CRL has been generated to report the revocal of certificate for $2"
+    RevokeCert $2 $3
     ;;
   -crl|--crl|crl)
     CheckEnv
@@ -564,6 +550,5 @@ case "$1" in
 esac
 
 # TODO:
-# 	- server,user : does CheckIfExist cannot be factorised at the begining of GenerateCert (instead of being called at the end twice) ? 
 #	- verify : verify also agains CRL for revoked certificate (for now, won't tell invalid revoked certificates!)
 # - This Is The End
