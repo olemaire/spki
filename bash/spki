@@ -356,6 +356,32 @@ else
 fi
 }
 
+PrintCRLInfo() {
+# Will print human readable info about current CRL
+# openssl crl -inform PEM -in ./crl/current_crl.pem -text -noout
+if [ ! -f $dir/crl/current_crl.pem ]; then
+  DieLogging 13 "PrintCRLInfo: no CRL present!"
+else 
+  echo "Printing current CRL informations:"
+  /usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -text -noout || DieLogging 66 "PrintCRLInfo: error trying to print CRL information"
+fi
+}
+
+PrintCAInfo() {
+# Will print human readable info regarding the CA
+echo "General info on the Certificate Authority:"
+echo "-> Not Implemented Yet..."
+}
+
+PrintCertInfo() {
+# Will print human readable info regarding a given certificate - if exists (else die)
+local subject=$1
+CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $2 does not exists!"
+echo "Printing certificate information for $subject:" 
+/usr/bin/openssl x509 -text -in $dir/certs/$subject.pem -noout || DieLogging 66 "PrintCertInfo: error trying to print Cert information for $subject"
+}
+
+
 DieLogging() {
 # exit with error code and associated message, sysloging too.
 local errorcode=$1
@@ -489,7 +515,17 @@ case "$1" in
     echo "A new CRL has been generated"
     ;;
   -info|--info|info)
-    echo "info - Not Implemented yet"
+    CheckEnv
+    case "$2" in
+      crl)
+        PrintCRLInfo 
+        ;;
+      "")
+        PrintCAInfo
+        ;;
+      *)
+        PrintCertInfo $2
+    esac
     ;;
   -status|--status|status)
     echo "status - Not Implemented yet"
