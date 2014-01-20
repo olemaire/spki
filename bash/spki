@@ -33,7 +33,7 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
-automated="not"                          # Define if SPKI must be full automated or not (yes/not)
+automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
 
 
 ## FUNCTIONS
@@ -371,8 +371,23 @@ case "$certtype" in
     DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
 esac
 PrintMessage "info" "Let's generate a $certtype certificate for user $subject"
-LogToSyslog "info" "Generating keys for subject $subject..."
-  /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+LogToSyslog "info" "Generating keys for subject $subject..." 
+  case "$automated" in
+    yes|on)
+      /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+      ;;
+    no|not|off)
+      echo -e -n " |----> Protect key with a passphrase (y/n)? : [n] "
+      read keyboard
+      if [ "$keyboard" == "y" -o "$keyboard" == "Y" ]; then
+        /usr/bin/openssl genrsa -des3 -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+      else
+        /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+      fi
+     ;;
+    *)
+      DieLogging 12 "GeneratedCert called in an unsupported automated mode ($automated)"
+  esac
 LogToSyslog "info" "Generating CSR for subject $subject..."
   /usr/bin/openssl req -new -config $dir/csr/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
 LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
@@ -664,6 +679,4 @@ case "$1" in
     DieLogging 12 "SPKI invalid function call \"$1\" (try --help)"
 esac
 
-# TODO:
-#	- verify : verify also agains CRL for revoked certificate (for now, won't tell invalid revoked certificates!)
 # - This Is The End
