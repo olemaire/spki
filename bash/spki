@@ -33,7 +33,7 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
-automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
+automated="not"                          # Define if SPKI must be full automated or not (yes/not)
 
 
 ## FUNCTIONS
@@ -222,7 +222,8 @@ LogToSyslog "info" "Initializing user environment (directories and indexes)..."
   fi
 
 LogToSyslog "info" "Issuing the first Certificate Revocation List"
-  GenerateCRL || DieLogging 126 "InitializeCA cannot generate its first CRL"
+  /bin/cp $dir/certs/ca.pem $dir/crl/ca.pem || DieLogging 126 "InitializeCA cannot copy CA certificate to CRL directory"
+  GenerateCRL || DieLogging 126 "InitializeCA cannot generate the first CRL"
 
 PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfully."
 }
@@ -403,8 +404,11 @@ GenerateCRL() {
 echo "Generating a new CRL.."
 LogToSyslog "info" "Generating a new CRL..."
   /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
-  /usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
-LogToSyslog "info" "A new CRL has been generated"
+  # FIXME: seems not needed unless wanting to publish outside (which should be done at the end using a "publish" function?) - to be seen when crl distribution point (see #5)
+  #/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
+  /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
+LogToSyslog "info" "A new CRL has been generated and CRL directory rehashed"
+
 }
 
 RevokeCert() {
@@ -428,7 +432,19 @@ esac
 echo "Revoking certificate for $subject (reason = $revocation_reason)"
 LogToSyslog "info" "Revoking certificate for subject $subject for reason $revocation_reason..."
   /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
-PrintMessage "info" "Certificate for subject $subject has been revoked"
+
+case "$automated" in
+  yes|on)
+    GenerateCRL || DieLogging 126 "RevokeCert cannot generate a CRL (automated mode is $automated)"
+    PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL generated"
+    ;;
+  no|not|off)
+    PrintMessage "info" "Certificate for subject $subject has been revoked"
+    PrintMessage "info" "You should think about generate a new CRL"
+    ;;
+  *)
+    DieLogging 12 "RevokeCert called in an unsupported automated mode ($automated)"
+esac
 }
 
 VerifyCert() {
@@ -436,11 +452,11 @@ VerifyCert() {
 local subject=$1
 CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
-local result=$(/usr/bin/openssl verify -CAfile $dir/certs/ca.pem $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
+local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regex=".*$subject.pem: OK\$"
 
-#FIXME: for now, VerifCert does not check agains Revocation status... but it should.
-#       With OpenSSL 1.0.1y (and counting), the verify --CRLfile file.pem could do (undocumented but working option)
+#       With OpenSSL 1.0.1y (and counting), the verify --CRLfile file.pem could do (undocumented but working option) in association with --CAfile ca.pem
+#       That should avoid to use c_rehash at each CRL generation
 #       But most of the 2011-2014 systems are still shipped with OpenSSL 0.9.8y ... so, need to find a generic way
 
 if [[ $result =~ $regex ]]; then
