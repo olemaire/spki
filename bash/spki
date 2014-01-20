@@ -16,6 +16,7 @@ BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
 USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
+automated="yes"                 # Define if SPKI must be full automated or not - FIXME: for now, yes only.
 
 
 # SPKI internal variables - should not be changed
@@ -77,7 +78,18 @@ LogToSyslog "info" "Initializing Random Bits..."
 
 LogToSyslog "info" "Generating the Certificate Authority private Key..."
   sleep 1 
-  /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+  case "$automated" in
+    yes)
+      LogToSyslog "info" "-> automated mode is on..."
+      /usr/bin/openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+      ;;
+    no)
+      LogToSyslog "info" "-> automated mode is off..."
+      /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+      ;;
+    *)
+      DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
+  esac
   chmod 600 $dir/private/ca.key || DieLogging 126 "InitializeCA cannot chmod the Certificate Authority private Key"
 
 LogToSyslog "info" "Generating Certificate Authority OpenSSL configuration file..."
@@ -100,7 +112,7 @@ default_crl_days        = $CRL_DAYS                                         # Ho
 default_md              = sha1                                              # MD to use
 preserve                = no                                                # Keep passed DN ordering
 name_opt                = multiline,-esc_msb,utf8                           # Display UTF-8 characters
-x509_extensions         = server_cert
+x509_extensions         = server_cert                                       # default x509v3 extensions used
 policy                  = policy_anything
 [ policy_match ]
 countryName             = match
@@ -128,7 +140,7 @@ default_bits                    = $BITS
 dir                             = $dir
 default_keyfile                 = $dir/private/ca.key
 utf8                            = yes                                      # Input are dealt as UTF-8
-prompt                          = no                                       # Do not prompt for DN while managing CSR
+prompt                          = no                                       # Do not prompt for DN while managing CSR - because full automated way
 distinguished_name              = req_distinguished_name
 x509_extensions                 = v3_ca
 string_mask                     = utf8only                                 # Emit UTF-8 Strings
@@ -228,20 +240,20 @@ local OPENSSL_CONFIG="$dir/certs/$subject.conf"
 cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
 # OpenSSL configuration filed use to generate a certificate for $subject
 [ req ]
-default_bits        = $BITS
-default_keyfile     = $dir/keys/$subject.key
-default_md          = sha1
-utf8                = yes
-prompt              = no
-distinguished_name  = req_distinguished_name
-x509_extension      = cert_req
-string_mask         = utf8only
+default_bits          = $BITS
+default_keyfile       = $dir/keys/$subject.key
+default_md            = sha1
+utf8                  = yes
+prompt                = no                                    # do not prompt for DN validation - because full automated way
+distinguished_name    = req_distinguished_name
+x509_extension        = cert_req
+string_mask           = utf8only
 
 [ req_distinguished_name ]
-countryName                     = "$COUNTRY"
-organizationName                = "$COMPANY"
-commonName                      = $subject
-emailAddress                    = $emailaddressdefault
+countryName           = "$COUNTRY"
+organizationName      = "$COMPANY"
+commonName            = $subject
+emailAddress          = $emailaddressdefault
 
 [ cert_req ]
 basicConstraints      = critical, CA:false
@@ -249,7 +261,6 @@ subjectKeyIdentifier  = hash
 keyUsage              = digitalSignature, keyEncipherment
 extendedKeyUsage      = $extendedkeyusage
 nsCertType            = $nscerttype
-nsComment             = "SPKI $COMPANY Certificate"
 EOT
 }
 
@@ -286,7 +297,18 @@ LogToSyslog "info" "Generating keys for subject $subject..."
 LogToSyslog "info" "Generating CSR for subject $subject..."
   /usr/bin/openssl req -new -config $dir/certs/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
 LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
-  /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+  case "$automated" in
+    yes)
+      LogToSyslog "info" "-> automated mode is on..."
+      /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+      ;;
+    no)
+      LogToSyslog "info" "-> automated mode is off..."
+      /usr/bin/openssl ca -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+      ;;
+    *)
+      DieLogging 12 "GeneratedCert called in an unsupported automated mode ($automated)"
+  esac
 LogToSyslog "info" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
 LogToSyslog "info" "Verifying certificate for $subject..."
