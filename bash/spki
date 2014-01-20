@@ -25,7 +25,8 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
                                          #   root_ca.conf: Certificate Authority OpenSSL configuration file
                                          # datas/ : where index, serials and DB are stored for internal SPKI usage
                                          #   index(.old): index of all certificates (and last action backup)
-                                         #   serial(.old): last certificate serial issued (and last action backup)
+                                         #   serial_cert(.old): next certificate serial to ve used (and last action backup)
+                                         #   serial_crl(.old): next CRL serial to be used (and last action backup)
                                          #   certs/: directory containing all certificates delivered so far
                                          #   random_bits: pseudo-Random bytes used for OpenSSL entropy
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
@@ -81,20 +82,22 @@ LogToSyslog "info" "Generating the Certificate Authority private Key..."
 LogToSyslog "info" "Generating Certificate Authority OpenSSL configuration file..."
   /bin/cat > $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file"
 [ ca ]
-default_ca              = default_CA
+default_ca              = default_CA                                        # The default CA section
 [ default_CA ]
-dir                     = $dir
-certs                   = \$dir/certs
-new_certs_dir           = \$dir/datas/certs
-database                = \$dir/datas/index
-serial                  = \$dir/datas/serial
-RANDFILE                = \$dir/datas/random_bits
-certificate             = \$dir/certs/ca.pem
-private_key             = \$dir/private/ca.key
-default_days            = $SERVER_DAYS
-default_crl_days        = 30
-default_md              = sha1
-preserve                = no
+dir                     = $dir                                              # Top directory
+certs                   = $dir/certs                                        # Certificate repository
+new_certs_dir           = $dir/datas/certs                                  # Certificate archive
+database                = $dir/datas/index                                  # CA database
+unique_subject          = no                                                # Require unique subject
+serial                  = $dir/datas/serial_cert                            # Cert number file
+crlnumber               = $dir/datas/serial_crl                             # CRL number file
+RANDFILE                = $dir/datas/random_bits
+certificate             = $dir/certs/ca.pem                                 # The CA certificate
+private_key             = $dir/private/ca.key                               # The CA private key
+default_days            = $SERVER_DAYS                                      # How long to certify for
+default_crl_days        = $CRL_DAYS                                         # How long a CRL is due 
+default_md              = sha1                                              # MD to use
+preserve                = no                                                # Keep passed DN ordering
 x509_extensions         = server_cert
 policy                  = policy_anything
 [ policy_match ]
@@ -120,7 +123,7 @@ basicConstraints                = critical,CA:false
 [ req ]
 default_bits                    = $BITS
 dir                             = $dir
-default_keyfile                 = \$dir/private/ca.key
+default_keyfile                 = $dir/private/ca.key
 distinguished_name              = req_distinguished_name
 x509_extensions                 = v3_ca
 string_mask                     = nombstr
@@ -165,8 +168,11 @@ LogToSyslog "info" "Initializing user environment (directories and indexes)..."
   if [ ! -d $dir/datas/certs ]; then
     mkdir -p $dir/datas/certs || DieLogging 126 "InitializeCA Cannot create $dir/datas/certs directory"
   fi
-  if [ ! -f $dir/datas/serial ]; then
-    echo '01' > $dir/datas/serial || DieLogging 126 "InitializeCA cannot create $dir/datas/serial file"
+  if [ ! -f $dir/datas/serial_cert ]; then
+    echo '01' > $dir/datas/serial_cert || DieLogging 126 "InitializeCA cannot create $dir/datas/serial_cert file"
+  fi
+  if [ ! -f $dir/datas/serial_crl ]; then
+    echo '01' > $dir/datas/serial_crl || DieLogging 126 "InitializeCA cannot create $dir/datas/serial_crl file"
   fi
   if [ ! -f $dir/datas/index ]; then
     /bin/cp /dev/null $dir/datas/index || DieLogging 126 "InitializeCA cannot create $dir/datas/index file"
@@ -231,7 +237,7 @@ cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create
 # OpenSSL configuration filed use to generate a certificate for $subject
 [ req ]
 default_bits        = $BITS
-default_keyfile     = keys/$subject.key
+default_keyfile     = $dir/keys/$subject.key
 default_md          = sha1
 distinguished_name  = req_distinguished_name
 x509_extension      = cert_req
@@ -418,16 +424,19 @@ Available options are:
     -renew <email,fqdn>             Renew a given certificate.
     -revoke <email,fqdn> (reason)   Revoke a given certificate.
     -crl                            Generate a Certificate Revocation List.
+    -info <email,fqdn,ca,crl>       Will display human readable infos on certificate/CRL
     -status                         Will give information on the SPKI status.
     -help                           Display this short help message.
 
 Exemples:
 	spki -server www.senso-rezo.org
+        spki info www.senso-rezo.org
 	spki -user olivier.lemaire@senso-rezo.org
         spki -revoke ldap.senso-rezo.org
 	spki -revoke www.senso-rezo.org keyCompromise
 	spki -renew olivier.lemaire@senso-rezo.org
 	spki -crl
+        spki info crl
 
 "
 }
@@ -478,6 +487,9 @@ case "$1" in
     CheckEnv
     GenerateCRL
     echo "A new CRL has been generated"
+    ;;
+  -info|--info|info)
+    echo "info - Not Implemented yet"
     ;;
   -status|--status|status)
     echo "status - Not Implemented yet"
