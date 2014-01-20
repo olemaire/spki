@@ -369,8 +369,26 @@ fi
 
 PrintCAInfo() {
 # Will print human readable info regarding the CA
+local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
+local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
+local castartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -startdate) || DieLogging 66 "PrintCAInfo: cannot stat CA startdate from CA certificate"
+local caenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -enddate) || DieLogging 66 "PrintCAInfo: cannot stat CA enddate from CA certificate"
+local validcert=$(grep "^V" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Valid certificates in CA index file"
+local revokedcert=$(grep "^R" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Revoked certificates in CA index file"
+local expiredcert=$(grep "^E" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Expired certificates in CA index file"
+local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
+local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 echo "General info on the Certificate Authority:"
-echo "-> Not Implemented Yet..."
+echo "------------------------------------------"
+echo "Cryptographic Engine:                       $opensslversion"
+echo "Certificate Authority DN:                   ${caissuer//issuer=\ \//}"
+echo "Start Validity on:                          ${castartdate//notBefore=/}"
+echo "End Validity on:                            ${caenddate//notAfter=/}"
+echo "Issued certificates Valid/Revoked/Expired:  ${validcert//[[:space:]]/} / ${revokedcert//[[:space:]]/} / ${expiredcert//[[:space:]]/}"
+echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
+echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
+echo "Current Status:                             OK"
+echo ""
 }
 
 PrintCertInfo() {
