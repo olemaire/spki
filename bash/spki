@@ -546,7 +546,9 @@ case "$1" in
     esac
     ;;
   -status|--status|status)
-    echo "status - Not Implemented yet"
+    if CheckEnv ; then
+      echo "OK"
+    fi
     ;;
   -h|-help|--help|help)
     Usage
