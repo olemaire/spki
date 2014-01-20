@@ -16,7 +16,7 @@ BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
 USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
-automated="yes"                 # Define if SPKI must be full automated or not - FIXME: for now, yes only.
+automated="yes"                  # Define if SPKI must be full automated or not (yes/not)
 
 
 # SPKI internal variables - should not be changed
@@ -79,11 +79,11 @@ LogToSyslog "info" "Initializing Random Bits..."
 LogToSyslog "info" "Generating the Certificate Authority private Key..."
   sleep 1 
   case "$automated" in
-    yes)
+    yes|on)
       LogToSyslog "info" "-> automated mode is on..."
       /usr/bin/openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
-    no)
+    no|not|off)
       LogToSyslog "info" "-> automated mode is off..."
       /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
@@ -135,21 +135,6 @@ authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = serverAuth,clientAuth,msSGC,nsSGC
 basicConstraints                = critical,CA:false
 nsComment                       = "SPKI $COMPANY Server Certificate"
-[ req ]
-default_bits                    = $BITS
-dir                             = $dir
-default_keyfile                 = $dir/private/ca.key
-utf8                            = yes                                      # Input are dealt as UTF-8
-prompt                          = no                                       # Do not prompt for DN while managing CSR - because full automated way
-distinguished_name              = req_distinguished_name
-x509_extensions                 = v3_ca
-string_mask                     = utf8only                                 # Emit UTF-8 Strings
-req_extensions                  = v3_req
-[ req_distinguished_name ]
-countryName                     = "$COUNTRY"
-organizationName                = "$COMPANY"
-organizationalUnitName          = "$COMPANY Security Services"
-commonName                      = "$COMPANY Root CA"
 [ v3_ca ]
 basicConstraints                = critical,CA:true
 subjectKeyIdentifier            = hash
@@ -170,6 +155,54 @@ authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = clientAuth,emailProtection
 nsComment                       = "SPKI $COMPANY User Certificate"
 EOT
+case "$automated" in
+  yes|on)
+    /bin/cat >> $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file - req part"
+[ req ]
+default_bits                    = $BITS
+dir                             = $dir
+default_keyfile                 = $dir/private/ca.key
+utf8                            = yes                                      # Input are dealt as UTF-8
+prompt                          = no                                       # Do not prompt for DN while managing CSR - because full automated way
+distinguished_name              = req_distinguished_name
+x509_extensions                 = v3_ca
+string_mask                     = utf8only                                 # Emit UTF-8 Strings
+req_extensions                  = v3_req
+[ req_distinguished_name ]
+countryName                     = "$COUNTRY"
+organizationName                = "$COMPANY"
+organizationalUnitName          = "$COMPANY Security Services"
+commonName                      = "$COMPANY Root CA"
+EOT
+    ;;
+  no|not|off)
+    /bin/cat >> $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file - req part"
+[ req ]
+default_bits                    = $BITS
+dir                             = $dir
+default_keyfile                 = $dir/private/ca.key
+utf8                            = yes                                      # Input are dealt as UTF-8
+distinguished_name              = req_distinguished_name
+x509_extensions                 = v3_ca
+string_mask                     = utf8only                                 # Emit UTF-8 Strings
+req_extensions                  = v3_req
+[ req_distinguished_name ]
+countryName                     = Country Name (2 letter code)
+countryName_default             = "$COUNTRY"
+countryName_min                 = 2
+countryName_max                 = 2
+0.organizationName              = Organization Name
+0.organizationName_default      = "$COMPANY"
+organizationalUnitName          = Certificate Division
+organizationalUnitName_default  = "$COMPANY Security Team"
+commonName                      = CA Name
+commonName_default              = "$COMPANY Root CA"
+commonName_max                  = 64
+EOT
+    ;;
+  *)
+    DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
+esac
 
 LogToSyslog "info" "Self-signing the Certificate Authority Certificate..."
   /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
@@ -223,11 +256,15 @@ local subject=$2
 LogToSyslog "info" "Generating OpenSSL $conftype config file for subject $subject..."
 case "$conftype" in
   server)
+    local commonname="Common Name (ex:ldap.$DOMAIN)"
+    local emailaddress="Server Administrator email address"
     local emailaddressdefault="$supportmail@$DOMAIN"
     local extendedkeyusage="serverAuth, clientAuth"
     local nscerttype="server"
     ;;
   user)
+    local commonname="Common Name (ex: john.doe@$DOMAIN)"
+    local emailaddress="User email address"
     local emailaddressdefault="$subject"
     local extendedkeyusage="clientAuth"
     local nscerttype="client,email"
@@ -236,7 +273,7 @@ case "$conftype" in
     DieLogging 12 "Illegal function call: GenerateOpenSSLConf with type $conftype"
 esac
 
-local OPENSSL_CONFIG="$dir/certs/$subject.conf"
+local OPENSSL_CONFIG="$dir/csr/$subject.conf"
 cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
 # OpenSSL configuration filed use to generate a certificate for $subject
 [ req ]
@@ -244,17 +281,10 @@ default_bits          = $BITS
 default_keyfile       = $dir/keys/$subject.key
 default_md            = sha1
 utf8                  = yes
-prompt                = no                                    # do not prompt for DN validation - because full automated way
+#prompt                = no                                    # do not prompt for DN validation - because full automated way
 distinguished_name    = req_distinguished_name
 x509_extension        = cert_req
 string_mask           = utf8only
-
-[ req_distinguished_name ]
-countryName           = "$COUNTRY"
-organizationName      = "$COMPANY"
-commonName            = $subject
-emailAddress          = $emailaddressdefault
-
 [ cert_req ]
 basicConstraints      = critical, CA:false
 subjectKeyIdentifier  = hash
@@ -262,6 +292,38 @@ keyUsage              = digitalSignature, keyEncipherment
 extendedKeyUsage      = $extendedkeyusage
 nsCertType            = $nscerttype
 EOT
+case "$automated" in
+  yes|on)
+    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+[ req_distinguished_name ]
+countryName           = "$COUNTRY"
+organizationName      = "$COMPANY"
+commonName            = $subject
+emailAddress          = $emailaddressdefault
+EOT
+    ;;
+  no|not|off)
+    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+[ req_distinguished_name ]
+countryName                      = Country Name (2 letter code)
+countryName_default              = "$COUNTRY"
+countryName_min                  = 2
+countryName_max                  = 2
+organizationName                 = Organization Name
+organizationName_default         = "$COMPANY"
+organizationalUnitName           = Certificate Organisation
+organizationalUnitName_default   = "$COMPANY Security Team"
+commonName                       = "$commonname"
+commonName_default               = $subject
+commonName_max                   = 64
+emailAddress                     = "$emailaddress"
+emailAddress_default             = "$emailaddressdefault"
+emailAddress_max                 = 64
+EOT
+    ;;
+  *)
+    DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
+esac
 }
 
 GenerateCert() {
@@ -295,16 +357,16 @@ PrintMessage "info" "Let's generate a $certtype certificate for user $subject"
 LogToSyslog "info" "Generating keys for subject $subject..."
   /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
 LogToSyslog "info" "Generating CSR for subject $subject..."
-  /usr/bin/openssl req -new -config $dir/certs/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
+  /usr/bin/openssl req -new -config $dir/csr/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
 LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
   case "$automated" in
-    yes)
+    yes|on)
       LogToSyslog "info" "-> automated mode is on..."
       /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
-    no)
+    no|not|off)
       LogToSyslog "info" "-> automated mode is off..."
-      /usr/bin/openssl ca -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+      /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
     *)
       DieLogging 12 "GeneratedCert called in an unsupported automated mode ($automated)"
@@ -376,7 +438,6 @@ fi
 
 PrintCRLInfo() {
 # Will print human readable info about current CRL
-# openssl crl -inform PEM -in ./crl/current_crl.pem -text -noout
 if [ ! -f $dir/crl/current_crl.pem ]; then
   DieLogging 13 "PrintCRLInfo: no CRL present!"
 else 
