@@ -372,11 +372,11 @@ case "$certtype" in
   *)
     DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
 esac
-PrintMessage "info" "Let's generate a $certtype certificate for user $subject"
+LogToSyslog "info" "Let's generate a $certtype certificate for user $subject"
 LogToSyslog "info" "Generating keys for subject $subject..." 
   case "$automated" in
     yes|on)
-      /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+      /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS > /dev/null 2>&1 || DieLogging 66 "GenerateCert cannot generate key for $subject"
       ;;
     no|not|off)
       echo -e -n " |----> Protect key with a passphrase (y/n)? : [n] "
@@ -418,12 +418,12 @@ PrintMessage "info" "Have a nice day."
 
 GenerateCRL() {
 # Will generate a new CRL
-PrintMessage "info" "Generating a new CRL..."
 case "$automated" in
   yes|on)
     /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
   no|not|off)
+    PrintMessage "info" "Generating a new CRL..."
     /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
   *)
@@ -447,29 +447,30 @@ local reason=$2
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
 case "$reason" in
   unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
-    LogToSyslog "info" "RevokeCert: reason given for Certificate revocation is $reason"
+    LogToSyslog "info" "RevokeCert: is called to revoke certificate for subject $subjet with reason $reason"
     local revocation_reason=$reason
     ;;
   "")
-    LogToSyslog "info" "RevokeCert: no reason given, so defaulting to unspecified"
+    LogToSyslog "info" "RevokeCert: is called to revoke certificate for subject $subject with no reason, so defaulting to unspecified)"
     local revocation_reason="unspecified"
     ;;
   *)
-    LogToSyslog "notice" "RevokeCert: unknown reason ($reason) given for revocation, defaulting to unspecified" 
+    LogToSyslog "notice" "RevokeCert: is called to revoke certificate for subject $subject with unknown reason ($reason), defaulting to unspecified" 
     local revocation_reason="unspecified"
 esac
-echo "Revoking certificate for $subject (reason = $revocation_reason)"
-LogToSyslog "info" "Revoking certificate for subject $subject for reason $revocation_reason..."
-  /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
 
+PrintMessage "info" "Revoking certificate for $subject (reason = $revocation_reason):"
 case "$automated" in
   yes|on)
+    PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
+    /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason > /dev/null 2>&1 || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
     GenerateCRL || DieLogging 126 "RevokeCert cannot generate a CRL (automated mode is $automated)"
-    PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL generated"
+    PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL has been generated."
     ;;
   no|not|off)
-    PrintMessage "info" "Certificate for subject $subject has been revoked"
-    PrintMessage "info" "You should think about generate a new CRL"
+    /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+    PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
+    PrintMessage "info" "You should think about generate a new CRL."
     ;;
   *)
     DieLogging 12 "RevokeCert called in an unsupported automated mode ($automated)"
@@ -715,5 +716,7 @@ case "$1" in
 esac
 
 # TODO:
+# * deal with publication (CA cert, certs, crl) on a repository (see with OpenSSL configuration for CRL distribution)
+# * reclassify most LogToSyslog "info" to "debug" - and make sure to deal with verbosity/debugmode (dropping debug by default)
 # * check automated mode at startup - and die if not supported -> will reduce DieLogging 12 in tons of case $automated..
 # - This Is The End
