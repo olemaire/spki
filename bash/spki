@@ -16,10 +16,9 @@ BITS=2048                        # Random bits used
 SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
 USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
-automated="yes"                  # Define if SPKI must be full automated or not (yes/not)
 
 
-# SPKI internal variables - should not be changed
+# SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
 dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
                                          # where the following sub-directories are used:
                                          # private/ : where the Certificate Authority key is stored for internal SPKI usage
@@ -34,6 +33,7 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
+automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
 
 
 ## FUNCTIONS
@@ -274,36 +274,40 @@ case "$conftype" in
 esac
 
 local OPENSSL_CONFIG="$dir/csr/$subject.conf"
-cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
-# OpenSSL configuration filed use to generate a certificate for $subject
+
+case "$automated" in
+  yes|on)
+    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
 [ req ]
 default_bits          = $BITS
 default_keyfile       = $dir/keys/$subject.key
 default_md            = sha1
 utf8                  = yes
-#prompt                = no                                    # do not prompt for DN validation - because full automated way
+prompt                = no                                    # do not prompt for DN validation - because full automated way
 distinguished_name    = req_distinguished_name
 x509_extension        = cert_req
 string_mask           = utf8only
-[ cert_req ]
-basicConstraints      = critical, CA:false
-subjectKeyIdentifier  = hash
-keyUsage              = digitalSignature, keyEncipherment
-extendedKeyUsage      = $extendedkeyusage
-nsCertType            = $nscerttype
-EOT
-case "$automated" in
-  yes|on)
-    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+
 [ req_distinguished_name ]
-countryName           = "$COUNTRY"
-organizationName      = "$COMPANY"
-commonName            = $subject
-emailAddress          = $emailaddressdefault
+countryName             = "$COUNTRY"
+organizationName        = "$COMPANY"
+organizationalUnitName  = "Operational Unit"
+commonName              = $subject
+emailAddress            = $emailaddressdefault
+
 EOT
     ;;
   no|not|off)
-    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+    /bin/cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+[ req ]
+default_bits          = $BITS
+default_keyfile       = $dir/keys/$subject.key
+default_md            = sha1
+utf8                  = yes
+distinguished_name    = req_distinguished_name
+x509_extension        = cert_req
+string_mask           = utf8only
+
 [ req_distinguished_name ]
 countryName                      = Country Name (2 letter code)
 countryName_default              = "$COUNTRY"
@@ -319,11 +323,23 @@ commonName_max                   = 64
 emailAddress                     = "$emailaddress"
 emailAddress_default             = "$emailaddressdefault"
 emailAddress_max                 = 64
+
 EOT
     ;;
   *)
     DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
 esac
+
+cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
+# OpenSSL configuration filed use to generate a certificate for $subject
+[ cert_req ]
+basicConstraints      = critical, CA:false
+subjectKeyIdentifier  = hash
+keyUsage              = digitalSignature, keyEncipherment
+extendedKeyUsage      = $extendedkeyusage
+nsCertType            = $nscerttype
+EOT
+
 }
 
 GenerateCert() {
