@@ -18,19 +18,19 @@ CRL_DAYS=31                      # Days between each CRL is due
 
 
 # SPKI internal variables - should not be changed
-dir=$(cd `dirname $0` && pwd)          # directory where the SPKI is to be run
-                                       # where the following sub-directories are used:
-                                       # private/ : where the Certificate Authority key is stored for internal SPKI usage
-                                       #   ca.key: Certificate Authority private key - MUST NOT BE DISTRIBUTED
-                                       #   root_ca.conf: Certificate Authority OpenSSL configuration file
-                                       # datas/ : where index, serials and DB are stored for internal SPKI usage
-                                       #   index(.old): index of all certificates (and last action backup)
-                                       #   serial(.old): last certificate serial issued (and last action backup)
-                                       #   certs/: directory containing all certificates delivered so far
-                                       #   random_bits: pseudo-Random bytes used for OpenSSL entropy
-CONFIG_CA="$dir/private/root_ca.conf"  # where the Certificate Authority OpenSSL configuration file is stored
-loggertag="SPKI"                       # Tag used for messages within syslog
-loggerchan="daemon"                    # Facitily used for messages within syslog
+dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
+                                         # where the following sub-directories are used:
+                                         # private/ : where the Certificate Authority key is stored for internal SPKI usage
+                                         #   ca.key: Certificate Authority private key - MUST NOT BE DISTRIBUTED
+                                         #   root_ca.conf: Certificate Authority OpenSSL configuration file
+                                         # datas/ : where index, serials and DB are stored for internal SPKI usage
+                                         #   index(.old): index of all certificates (and last action backup)
+                                         #   serial(.old): last certificate serial issued (and last action backup)
+                                         #   certs/: directory containing all certificates delivered so far
+                                         #   random_bits: pseudo-Random bytes used for OpenSSL entropy
+CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
+loggertag="SPKI"                         # Tag used for messages within syslog
+loggerchan="daemon"                      # Facitily used for messages within syslog
 
 
 ## FUNCTIONS
@@ -312,9 +312,24 @@ LogToSyslog "info" "A new CRL has been generated"
 RevokeCert() {
 # Will revoke the certificate for subject $1 (must exists - see CheckIfExists)
 local subject=$1
+local reason=$2
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
-LogToSyslog "info" "Revoking certificate for subject $subject..."
-  /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+case "$reason" in
+  unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
+    LogToSyslog "info" "RevokeCert: reason given for Certificate revocation is $reason"
+    local revocation_reason=$reason
+    ;;
+  "")
+    LogToSyslog "info" "RevokeCert: no reason given, so defaulting to unspecified"
+    local revocation_reason="unspecified"
+    ;;
+  *)
+    LogToSyslog "notice" "RevokeCert: unknown reason ($reason) given for revocation, defaulting to unspecified" 
+    local revocation_reason="unspecified"
+esac
+
+LogToSyslog "info" "Revoking certificate for subject $subject for reason $revocation_reason..."
+  /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
 PrintMessage "info" "Certificate for subject $subject has been revoked"
 }
 
@@ -396,20 +411,21 @@ echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 Usage: spki <option> (<subject>) 
 
 Available options are:
-    -init			 Initialize a new Certiciate Authority.
-    -server <fqdn>		 Generate a Server certificate.
-    -user <email>		 Generate an User certificate.
-    -verify <email,fqdn>	 Verify a given certificate.
-    -renew <email,fqdn>		 Renew a given certificate.
-    -revoke <email,fqdn>	 Revoke a given certificate.
-    -crl			 Generate a Certificate Revocation List.
-    -status                      Will give information on the SPKI status
-    -help                        Display this short help message.
+    -init                           Initialize a new Certiciate Authority.
+    -server <fqdn>                  Generate a Server certificate.
+    -user <email>                   Generate an User certificate.
+    -verify <email,fqdn>            Verify a given certificate.
+    -renew <email,fqdn>             Renew a given certificate.
+    -revoke <email,fqdn> (reason)   Revoke a given certificate.
+    -crl                            Generate a Certificate Revocation List.
+    -status                         Will give information on the SPKI status.
+    -help                           Display this short help message.
 
 Exemples:
 	spki -server www.senso-rezo.org
 	spki -user olivier.lemaire@senso-rezo.org
-	spki -revoke www.senso-rezo.org
+        spki -revoke ldap.senso-rezo.org
+	spki -revoke www.senso-rezo.org keyCompromise
 	spki -renew olivier.lemaire@senso-rezo.org
 	spki -crl
 
@@ -454,7 +470,7 @@ case "$1" in
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
-    echo "Revoking certificate for $2" ; RevokeCert $2
+    echo "Revoking certificate for $2" ; RevokeCert $2 $3
     echo "Generating a new CRL.." ; GenerateCRL
     echo "A new CRL has been generated to report the revocal of certificate for $2"
     ;;
