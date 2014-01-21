@@ -6,9 +6,9 @@
 Here is the [Bash] source code for **SPKI**. You will need [OpenSSL]
 to make it run, and as both are installed by default on any decent Operating System, you can start generating certificates in few minutes as you can see:
 
-* <a href="Installation">Installation</a>, <a href="Configuration">Configuration</a> and <a href="Usage">Usage</a>
-* <a href="Tips">Tips and Tricks</a>
-* <a href="Playing">Playin'around</a>
+* <a href="#Installation">Installation</a>, <a href="#Configuration">Configuration</a> and <a href="#Usage">Usage</a>
+* <a href="#Tips">Tips and Tricks</a>
+* <a href="#Playing">Playin'around</a>
 
 This [Bash] flavor has been tested on OSX 10.9 with [OpenSSL] 0.9.8y, and Linux kernel 2.6.32 with [OpenSSL] 1.0.1c. It can handle thousands certificates without issue, even if it's more a beast of burden than a racehorse :
 
