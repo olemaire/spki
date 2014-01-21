@@ -9,6 +9,7 @@ Return Code | Meaning                           | Observations
 :----------:| :-------------------------------- | :-----
 0           | command was perfomed with success | ex: Generating a new certificate with success
 1-2         | Bash reserved                     | See [Bash Return Codes] 
+9           | Illegal configuration parameter   | ex: configuring with an unsupported automated mode
 10          | Operation Aborted by user         | ex: answering NO to a confirmation and exiting
 11          | CA not initialized                | ex: trying an operation before the CA has been initalized
 12          | Illegal function call             | ex: calling SPKI with unknown function

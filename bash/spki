@@ -46,6 +46,17 @@ if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ]; then
 fi
 }
 
+CheckConfig() {
+# Check if config is consistent
+case "$automated" in
+  yes|on|no|not|off)
+    LogToSyslog "info" "CheckConfig: automated mode asked by configuration is supported ($automated)"
+    ;;
+  *)
+    DieLogging 9 "CheckConfig: automated mode not supported ($automated)!!!" 
+esac
+}
+
 CheckIfExist() {
 # Check it the subject already exists - return 0 if exists, 1 if not
 local subject=$1
@@ -554,7 +565,7 @@ case "$errorcode" in
   10|11|12|13|14)
     PrintMessage "notice" "$message"
     ;;
-  66)
+  9|66)
     PrintMessage "emerg" "$message"
     ;;
   1|2|126|255)
@@ -651,6 +662,7 @@ Exemples:
 
 ## MAIN
 
+CheckConfig
 case "$1" in
   -init|--init|init)
     InitializeCA
