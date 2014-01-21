@@ -629,7 +629,7 @@ Available options are:
     --server <fqdn>                  Generate a Server certificate.
     --user <email>                   Generate an User certificate.
     --verify <email,fqdn>            Verify a given certificate.
-    --renew <email,fqdn>             Renew a given certificate.
+    --renew <email,fqdn> (reason)    Renew a given certificate.
     --revoke <email,fqdn> (reason)   Revoke a given certificate.
     --crl                            Generate a Certificate Revocation List.
     --info <email,fqdn,ca,crl>       Will display human readable infos on certificate/CRL
@@ -675,7 +675,7 @@ case "$1" in
     ;;
   -renew|--renew|renew)
     CheckEnv
-    echo "renew $2 - Not Implemented yet"
+    echo "renew $2 (reason $3) - Not Implemented yet"
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
