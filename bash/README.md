@@ -32,7 +32,7 @@ For example, if I want the user *john* to be the **SPKI** administrator, install
     Length: 32419 (32K) [text/plain]
     Saving to: '/opt/PKI/spki'
     
-    100%   [===========================================>] 32,419      --.-K/s   in 0.02s   
+    100%   [======================================================>] 32,419      --.-K/s   in 0.02s   
     
     2014-01-21 12:11:33 (1.48 MB/s) - '/opt/PKI/spki' saved [32419/32419]
 
@@ -44,26 +44,26 @@ For example, if I want the user *john* to be the **SPKI** administrator, install
 
 Once installed, you need to configure:
 
-1. the mode to use **SPKI** 
-2. the default fields you want **SPKI** to apply/propose 
+1. the mode of operation of your **SPKI**: Automated or not.
+2. the default fields you want **SPKI** to apply/propose.
 
 As user *john*, edit the `/opt/PKI/spki` file and modify the following values accordingly to your needs.
 
-To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *no* instead.
+To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *not* instead.
 
     automated="yes"  # Define if SPKI must be full automated or not (yes/not)
     
-To configure the default fields of your PKI, modify the following variables to best suit your need:
+To configure the default fields of your PKI, modify the following variables to best suit your need. For example:
 
     # user/context variables - have to be changed depending on user/context
-    COUNTRY="US"                     # Country Code you want to registrer the PKI to (must be 2 letter country code)
-    DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
-    COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
-    supportmail="sysadm"             # The Support Email address used for server certiciates
-    BITS=2048                        # Random bits used
-    SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
-    USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
-    CRL_DAYS=31                      # Days between each CRL is due
+    COUNTRY="US"               # Country Code you want to registrer the PKI to (must be 2 letter country code)
+    DOMAIN="acme.com"          # Domain name that will appear by default: change it by your company domain name
+    COMPANY="ACME"             # Company name that will appear by default: change it by your company name
+    supportmail="support"      # The Support Email address used for server certiciates
+    BITS=2048                  # Random bits used
+    SERVER_DAYS=3653           # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
+    USER_DAYS=396              # User certificates will be issued (new, renewed) for this period (just over 13 months...)
+    CRL_DAYS=31                # Days between each CRL is due (so 1 CRL per full month)
 
 Once done, you can unflag the write attibute of the `/opt/PKI/spki` file. 
 

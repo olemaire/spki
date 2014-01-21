@@ -13,8 +13,8 @@ DOMAIN="senso-rezo.org"          # Domain name that will appear by default: chan
 COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
 supportmail="sysadm"             # The Support Email address used for server certiciates
 BITS=2048                        # Random bits used
-SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
-USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
+SERVER_DAYS=7306                 # Server certificate will be issued (new, renewed) for this period (just over 20 years...)
+USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
 
 
