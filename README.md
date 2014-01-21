@@ -96,6 +96,7 @@ Ok, feel good, but what about that PKI? Just ask:
     me@localhost:~/github/spki/bash$ ./spki --info
     General info on the Certificate Authority:
     ------------------------------------------
+    Host running SPKI:                          localhost.local
     Cryptographic Engine:                       OpenSSL 0.9.8y 5 Feb 2013
     Certificate Authority DN:                   C=US/O=Senso-Rezo/OU=Senso-Rezo Security Services/CN=Senso-Rezo Root CA
     Start Validity on:                          Jan 20 22:23:28 2014 GMT

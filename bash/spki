@@ -511,6 +511,7 @@ fi
 
 PrintCAInfo() {
 # Will print human readable info regarding the CA
+local myhost=$HOSTNAME
 local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
 local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
 local castartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -startdate) || DieLogging 66 "PrintCAInfo: cannot stat CA startdate from CA certificate"
@@ -522,6 +523,7 @@ local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pe
 local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 echo "General info on the Certificate Authority:"
 echo "------------------------------------------"
+echo "Host running SPKI:                          $myhost"
 echo "Cryptographic Engine:                       $opensslversion"
 echo "Certificate Authority DN:                   ${caissuer//issuer=\ \//}"
 echo "Start Validity on:                          ${castartdate//notBefore=/}"
@@ -572,17 +574,17 @@ local priority=$1
 local message=$2
 case "$priority" in 
   emerg|alert|crit|notice|info|debug)
-    /usr/bin/logger -p $loggerchan.$priority -t $loggertag \"$priority - $message\"
+    /usr/bin/logger -p $loggerchan.$priority -t $loggertag "$priority - $message"
     ;;
   err|error)
-    /usr/bin/logger -p $loggerchan.err -t $loggertag \"$priority - $message\"
+    /usr/bin/logger -p $loggerchan.err -t $loggertag "$priority - $message"
     ;;
   warn|warning)
-    /usr/bin/logger -p $loggerchan.warn -t $loggertag \"$priority - $message\"
+    /usr/bin/logger -p $loggerchan.warn -t $loggertag "$priority - $message"
     ;;
   *)
-    /usr/bin/logger -p $loggerchan.notice -t $loggertag \"notice - syslog priority unknown -> $priority \"
-    /usr/bin/logger -p $loggerchan.notice -t $loggertag \"$priority - $message\"
+    /usr/bin/logger -p $loggerchan.notice -t $loggertag "notice - syslog priority unknown -> $priority"
+    /usr/bin/logger -p $loggerchan.notice -t $loggertag "$priority - $message"
 esac
 }
 
@@ -713,7 +715,7 @@ case "$1" in
     echo ""
     ;;
   *)
-    DieLogging 12 "SPKI invalid function call \"$1\" (try --help)"
+    DieLogging 12 "SPKI invalid function call $1 (try --help)"
 esac
 
 # TODO:
