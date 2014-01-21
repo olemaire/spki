@@ -1,6 +1,7 @@
 [Bash]: http://www.gnu.org/software/bash/
 [OpenSSL]: http://www.openssl.org/
 [HomePage]: https://github.com/olemaire/spki
+[Daniel Pocock Blog]: http://danielpocock.com/rsa-key-sizes-2048-or-4096-bits
 
 # SPKI - the Bash flavor
 
@@ -53,7 +54,7 @@ To select the Automated mode, make sure *yes* is the value for the "automated" v
 
     automated="yes"  # Define if SPKI must be full automated or not (yes/not)
     
-To configure the default fields of your PKI, modify the following variables to best suit your need. For example:
+To configure the default fields of your PKI, modify the following variables to best suit your need (see #Tips and Tricks section of this document for some more infos). For example:
 
     # user/context variables - have to be changed depending on user/context
     COUNTRY="US"               # Country Code you want to registrer the PKI to (must be 2 letter country code)
@@ -66,6 +67,8 @@ To configure the default fields of your PKI, modify the following variables to b
     CRL_DAYS=31                # Days between each CRL is due (so 1 CRL per full month)
 
 Once done, you can unflag the write attibute of the `/opt/PKI/spki` file. 
+
+    glamorous@scalde:/opt/PKI$ chmod -w spki 
 
 Let's then initialize your **SPKI** instance:
 
@@ -102,7 +105,29 @@ You can now start using your **SPKI** to manage certificates :)
 Please consult the main Github Repository [HomePage] for how to use **SPKI**, as no matter the flavor you prefer, the usage and commands are the same.
 
 # Tips and Tricks
-TODO
+## Size of private keys
+By default, **SPKI** will use keys of 2048 bits. If you want another size, just change the "BITS" variable to your key size preference. This option must be done **before** the first initalization of **SPKI**
+
+    BITS=2048                        # Random bits used
+
+There is no "best and fits all" solution for key size: have a look at [Daniel Pocock Blog] page on this topic.
+## Renewal time
+By default, **SPKI** will issue:
+
+* *user* certificate for 13 months - then you will need to renew them
+* *server* certiticates for just over 20 years (! yes :) - then you will need to renew them.
+* *CRL* that last for 31 days before needing generation of a new *CRL* (of course you are free to deliver new *CRL* before this date).
+
+You can of course set your own duration, using the following variables:
+
+    SERVER_DAYS=7306      # Server certificate will be issued (new, renewed) for this period (just over 20 years...)
+    USER_DAYS=396         # User certificates will be issued (new, renewed) for this period (just over 13 months...)
+    CRL_DAYS=31           # Days between each CRL is due
+
+As for key size, there is no "best and fits all" (nor best practice anyway) regarding the duration to use for certificate issuing - as it really depends on your specific needs and organisation.
+
+Have a look at [Daniel Pocock Blog] page on this topic to help you find your best answer.
+
 
 # Playin'around
 ## Big Guys need huge volume of certificates...
