@@ -1,5 +1,6 @@
 [Bash]: http://www.gnu.org/software/bash/
 [OpenSSL]: http://www.openssl.org/
+[HomePage]: https://github.com/olemaire/spki
 
 # SPKI - the Bash flavor
 
@@ -14,13 +15,62 @@ It can handle thousands certificates without issue, even if it's more a beast of
 
 # Let's use it
 ## Installation
-TODO
+Installation of the **SPKI** [Bash] flavor is pretty simple and straightforward:
 
+1. create a directory where you want to host your PKI: 
+2. copy into that directory the `spki` executable script you can find in the **SPKI** Github repository
+3. make sure rights are ok, and that only the user you want to manipulate **SPKI** has access (read/write) this zone.
+
+For example, if I want the user *john* to be the **SPKI** administrator, installing it in `/opt/PKI` you should:
+
+    root@server:~# mkdir /opt/PKI
+    root@server:~# wget https://raw.github.com/olemaire/spki/master/bash/spki -O /opt/PKI/spki
+    --2014-01-21 12:11:33--  https://raw.github.com/olemaire/spki/master/bash/spki
+    Resolving raw.github.com (raw.github.com)... 199.27.72.133
+    Connecting to raw.github.com (raw.github.com)|199.27.72.133|:443... connected.
+    HTTP request sent, awaiting response... 200 OK
+    Length: 32419 (32K) [text/plain]
+    Saving to: '/opt/PKI/spki'
+    
+    100%   [===========================================>] 32,419      --.-K/s   in 0.02s   
+    
+    2014-01-21 12:11:33 (1.48 MB/s) - '/opt/PKI/spki' saved [32419/32419]
+
+    root@server:~# chown +wx /opt/PKI/spki       
+    root@server:~# chown -R john /opt/PKI && chmod go= /opt/PKI 
+    
 
 ## Configuration
-TODO
 
-## Usage
+Once installed, you need to configure:
+
+1. the mode to use **SPKI** 
+2. the default fields you want **SPKI** to apply/propose 
+
+As user *john*, edit the `/opt/PKI/spki` file and modify the following values accordingly to your needs.
+
+To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *no* instead.
+
+    automated="yes"  # Define if SPKI must be full automated or not (yes/not)
+    
+To configure the default fields of your PKI, modify the following variables to best suit your need:
+
+    # user/context variables - have to be changed depending on user/context
+    COUNTRY="US"                     # Country Code you want to registrer the PKI to (must be 2 letter country code)
+    DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
+    COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
+    supportmail="sysadm"             # The Support Email address used for server certiciates
+    BITS=2048                        # Random bits used
+    SERVER_DAYS=7306                 # Server certificate will be vailid (new, renewed) for this period (just over 20 years...)
+    USER_DAYS=396                    # User certificates will be valid (new, renewed) for this period (just over 13 months...)
+    CRL_DAYS=31                      # Days between each CRL is due
+
+Once done, you can unflag the write attibute of the `/opt/PKI/spki` file. 
+
+Your **SPKI** is ready to serve.
+
+# Usage
+Please consult the main Github Repository [HomePage] for how to use **SPKI**, as no matter the flavor you prefer, the usage and commands are the same.
 
 # Tips and Tricks
 TODO
