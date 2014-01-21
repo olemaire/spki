@@ -167,7 +167,7 @@ To verify a given certificate, just issue the `--verify` command:
     me@localhost:~/github/spki/bash$
     
 
-Let's revoke a cerficate this certificate:
+Let's revoke this certificate with the `--revoke` command:
     
     me@localhost:~/github/spki/bash$ ./spki --revoke openvpn.pki.me
     ----> Revoking certificate for openvpn.pki.me (reason = unspecified):
