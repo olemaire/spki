@@ -1,7 +1,7 @@
 [Perl]:	http://www.perl.org/
 [Bash]: http://www.gnu.org/software/bash/
 [OpenSSL]: http://www.openssl.org/
-
+[FQDN]: https://en.wikipedia.org/wiki/Fully_qualified_domain_name
 # Simple Public Key Infrastructure - SPKI
 
 **SPKI** is a simple and stupid (but yet useful) *Public* Key Infrastrucure using [OpenSSL].
@@ -481,7 +481,7 @@ And of course you can use `--info` to look for information on a given certificat
     ##### GenerateCert cannot generate a certificate for invalid EMAIL (super@man)
     ----> Exiting with Error Code 12...
     me@localhost:~/github/spki/bash$ ./spki --server julia.robert@pki.me
-    ##### GenerateCert cannot generate a certificate for invalid FQDN (julia.robert@pki.me)
+    ##### GenerateCert cannot generate a certificate for invalid [FQDN] (julia.robert@pki.me)
     ----> Exiting with Error Code 12...
     me@localhost:~/github/spki/bash$ echo $?
     12
