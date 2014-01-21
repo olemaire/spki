@@ -21,10 +21,10 @@ Installation of the **SPKI** [Bash] flavor is pretty simple and straightforward:
 2. copy into that directory the `spki` executable script you can find in the **SPKI** Github repository
 3. make sure rights are ok, and that only the user you want to manipulate **SPKI** has access (read/write) this zone.
 
-For example, if I want the user *john* to be the **SPKI** administrator, installing it in `/opt/PKI` you should:
+For example, if I want the user *glamorous* to be the **SPKI** administrator, installing it in `/opt/PKI` you should:
 
-    root@server:~# mkdir /opt/PKI
-    root@server:~# wget https://raw.github.com/olemaire/spki/master/bash/spki -O /opt/PKI/spki
+    root@scalde:~# mkdir /opt/PKI
+    root@scalde:~# wget https://raw.github.com/olemaire/spki/master/bash/spki -O /opt/PKI/spki
     --2014-01-21 12:11:33--  https://raw.github.com/olemaire/spki/master/bash/spki
     Resolving raw.github.com (raw.github.com)... 199.27.72.133
     Connecting to raw.github.com (raw.github.com)|199.27.72.133|:443... connected.
@@ -36,8 +36,8 @@ For example, if I want the user *john* to be the **SPKI** administrator, install
     
     2014-01-21 12:11:33 (1.48 MB/s) - '/opt/PKI/spki' saved [32419/32419]
 
-    root@server:~# chown +wx /opt/PKI/spki       
-    root@server:~# chown -R john /opt/PKI && chmod go= /opt/PKI 
+    root@scalde:~# chown +wx /opt/PKI/spki       
+    root@scalde:~# chown -R glamorous /opt/PKI && chmod go= /opt/PKI 
     
 
 ## Configuration
@@ -47,7 +47,7 @@ Once installed, you need to configure:
 1. the mode of operation of your **SPKI**: Automated or not.
 2. the default fields you want **SPKI** to apply/propose.
 
-As user *john*, edit the `/opt/PKI/spki` file and modify the following values accordingly to your needs.
+As user *glamorous*, edit the `/opt/PKI/spki` file and modify the following values accordingly to your needs.
 
 To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *not* instead.
 
@@ -67,7 +67,36 @@ To configure the default fields of your PKI, modify the following variables to b
 
 Once done, you can unflag the write attibute of the `/opt/PKI/spki` file. 
 
-Your **SPKI** is ready to serve.
+Let's then initialize your **SPKI** instance:
+
+    glamorous@scalde:/opt/PKI$ ./spki --init
+    ##### Initializing Root Certificate Authority for ACME:
+    ----> Automated mode is ON...
+    ----> Initializing Random Bits...
+    ----> Generating the Certificate Authority private Key...
+    ----> Self-signing the Certificate Authority Certificate...
+    ----> Initializing user environment (directories and indexes)...
+    ##### ACME Root Certificate Authority initialized successfully.
+    glamorous@scalde:/opt/PKI$ 
+
+
+Your **SPKI** is ready to serve:
+
+    glamorous@scalde:/opt/PKI$ ./spki --info
+    General info on the Certificate Authority:
+    ------------------------------------------
+    Host running SPKI:                          scalde
+    Cryptographic Engine:                       OpenSSL 1.0.1c 10 May 2012
+    Certificate Authority DN:                   C=US/O=ACME/OU=ACME Security Services/CN=ACME Root CA
+    Start Validity on:                          Jan 21 17:41:23 2014 GMT
+    End Validity on:                            Jan 22 17:41:23 2024 GMT
+    Issued certificates Valid/Revoked/Expired:  0 / 0 / 0
+    Last CRL produced on:                       Jan 21 17:41:23 2014 GMT
+    Next CRL to be produced on:                 Feb 21 17:41:23 2014 GMT
+    Current Status:                             OK
+    glamorous@scalde:/opt/PKI$ 
+
+You can now start using your **SPKI** to manage certificates :)
 
 # Usage
 Please consult the main Github Repository [HomePage] for how to use **SPKI**, as no matter the flavor you prefer, the usage and commands are the same.

@@ -532,7 +532,6 @@ echo "Issued certificates Valid/Revoked/Expired:  ${validcert//[[:space:]]/} / $
 echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
 echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
 echo "Current Status:                             OK"
-echo ""
 }
 
 PrintCertInfo() {
