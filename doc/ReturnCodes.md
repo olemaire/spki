@@ -30,17 +30,17 @@ The same return codes will be used for the Bash and the Perl flavors of **SPKI**
 
 **SPKI** will log its actions (and potentials errors) to syslog, using the regular [syslog Facility and Severity levels].
 
-Severity Level | Meaning | Observations
+Severity Level | Meaning | Examples
 :------------- | :------ | :------------ 
-emerg          | | Panic condition that need immediate action from the staff.
-*alert*          | | **Not Used**. alert that need immediate action.
-crit           | | Critical failure that need immediate action.
-*err(or)*        | | **Not Used**. non urgent failure.
-warn(ing)      | | Not an error, but action required to check everything is okay.
-notice         | | Unusual condition, have to be reported to admin and/or developers to spot potential problems. No immediate action required.
-info           | | Normal operation message, no action requiered.
-*debug*          | | **Not Used***. Debug level message.
+**emerg**      | Panic condition that need immediate action from the staff. | **SPKI** is not operational.
+**alert**      | Alert that need immediate action. | Modifying (or trying to) modify CA elements.
+**crit**       | Critical failure that need immediate action. | Legal operation fails. Need administrative intervention.
+*err(or)*      | *Non urgent failure* | *Not Used*
+**warn(ing)**  | Not an error, but action required to check everything is okay. | Unusual action that need to be reported to staff.
+*notice*       | Unusual condition, have to be reported to admin and/or developers to spot potential problems. No immediate action required. | *Not Used*
+**info**       | Normal operation message, no action requiered. | Normal operation performed (result seen by the user).
+**debug**      | Debug level message. | Normal internal functions operations. Seen only if debugmode activited (disabled by default).
 
-Note that syslog severity levels *alert*, *err(or)* and *debug* are not used by **SPKI**.
+Note that syslog severity levels *err(or)*, *notice* are not used by **SPKI**, and *debug* is not logged unless debugmode is activated (disabled by default). Anyway, *debug* message are still seen by user form the CLI.
 
 The same return facility and severity levels will be used for the Bash and the Perl flavors of **SPKI**.

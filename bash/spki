@@ -17,6 +17,9 @@ SERVER_DAYS=7306                 # Server certificate will be issued (new, renew
 USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
 
+# user/context automation mode - have to be changed depending on user context
+automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
+
 
 # SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
 dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
@@ -33,15 +36,15 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
-automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
+debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
 
 
 ## FUNCTIONS
 CheckEnv() {
 # Check if the CA is operational
 if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ]; then
-  PrintMessage "info" "Check CA Environment reveal no pre-existing CA"
-  echo "Please run '$0 --init' to initalize a new Certificate Authority"
+  PrintMessage "emerg" "Check CA Environment reveal no pre-existing CA"
+  echo "##### Please run '$0 --init' to initalize a new Certificate Authority"
   DieLogging 11 "The Certificate Authority has not (yet) been Initialized"
 fi
 }
@@ -50,10 +53,17 @@ CheckConfig() {
 # Check if config is consistent
 case "$automated" in
   yes|on|no|not|off)
-    LogToSyslog "info" "CheckConfig: automated mode asked by configuration is supported ($automated)"
+    LogToSyslog "debug" "CheckConfig: automated mode asked is supported ($automated)"
     ;;
   *)
     DieLogging 9 "CheckConfig: automated mode not supported ($automated)!!!" 
+esac
+case "$debugmode" in
+  yes|no)
+    LogToSyslog "debug" "CheckConfig: debug mode is supported ($debugmode)"
+    ;;
+  *)
+    DieLogging 9 "CheckConfig: debugmode not supported ($debugmode)!!!" 
 esac
 }
 
@@ -70,21 +80,21 @@ fi
 
 InitializeCA() {
 # Initialize the PKI(CA) elements - warning as purge any existing previous elements
-LogToSyslog "notice" "Initialization of a Certificate Authority triggered"
+LogToSyslog "alert" "Initialization of a Certificate Authority triggered"
 if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
-  LogToSyslog "notice" "A existing Certificate Environment is detected while asking to Initialize a new one"
+  LogToSyslog "alert" "A existing Certificate Environment is detected while asking to Initialize a new one"
   echo "ALERT: all previous existing certificates will be erased!" ;
   echo -e -n "Are your sure you want to continue (y/n)? " ;
   read i ;
   [ "$i" = "y" ] || DieLogging 10 "InializeCA was canceled by user";
 fi
-PrintMessage "notice" "Initializing Root Certificate Authority for $COMPANY:"
+PrintMessage "alert" "Initializing Root Certificate Authority for $COMPANY:"
 
-LogToSyslog "info" "cleaning existing datas..."
+LogToSyslog "debug" "cleaning existing datas..."
   rm -rf $dir/{certs,csr,datas,keys,private,crl} || DieLogging 126 "InitializeCA cannot delete existing datas"
   mkdir $dir/{certs,csr,datas,keys,private,crl} || DieLogging 126 "InitializeCA cannot create base directory structure"
 
-LogToSyslog "info" "Generating the Certificate Authority signing environment..."
+LogToSyslog "debug" "Generating the Certificate Authority signing environment..."
   sleep 1 
   case "$automated" in
     yes|on)
@@ -100,10 +110,12 @@ LogToSyslog "info" "Generating the Certificate Authority signing environment..."
       PrintMessage "info" "Generating the Certificate Authority private Key..."
       /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
+    *)
+    DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
   esac
   chmod 600 $dir/private/ca.key || DieLogging 126 "InitializeCA cannot chmod the Certificate Authority private Key"
 
-LogToSyslog "info" "Generating Certificate Authority OpenSSL configuration file..."
+LogToSyslog "debug" "Generating Certificate Authority OpenSSL configuration file..."
   /bin/cat > $CONFIG_CA <<EOT || DieLogging 126 "InitializeCA cannot create Configuration file"
 [ ca ]
 default_ca              = default_CA                                        # The default CA section
@@ -211,6 +223,8 @@ commonName_default              = "$COMPANY Root CA"
 commonName_max                  = 64
 EOT
     ;;
+  *)
+  DieLogging 12  "InitializeCA called in an unsupported automated mode ($automated)"
 esac
 
 PrintMessage "info" "Self-signing the Certificate Authority Certificate..."
@@ -230,18 +244,18 @@ PrintMessage "info" "Initializing user environment (directories and indexes)..."
     /bin/cp /dev/null $dir/datas/index || DieLogging 126 "InitializeCA cannot create $dir/datas/index file"
   fi
 
-LogToSyslog "info" "Issuing the first Certificate Revocation List"
+LogToSyslog "debug" "Issuing the first Certificate Revocation List"
   /bin/cp $dir/certs/ca.pem $dir/crl/ca.pem || DieLogging 126 "InitializeCA cannot copy CA certificate to CRL directory"
   GenerateCRL || DieLogging 126 "InitializeCA cannot generate the first CRL"
 
-PrintMessage "notice" "$COMPANY Root Certificate Authority initialized successfully."
+PrintMessage "alert" "$COMPANY Root Certificate Authority initialized successfully."
 }
 
 CheckSubject() {
 # Check if $2 (subject) is a valid subject (server fqdn or email) depending on type (server=fqdn,user=email) - if ok return 0, else return 1
 local checktype=$1
 local subject=$2
-LogToSyslog "info" "Checking if $subject if of type $checktype..."
+LogToSyslog "debug" "Checking if $subject if of type $checktype..."
 case "$checktype" in
   fqdn)
     local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*\$" #FIXME: wildcard not supported with this regexp
@@ -263,7 +277,7 @@ GenerateOpenSSLConf() {
 # Will generate adequate OpenSSL configuration file for signing
 local conftype=$1
 local subject=$2
-LogToSyslog "info" "Generating OpenSSL $conftype config file for subject $subject..."
+LogToSyslog "debug" "Generating OpenSSL $conftype config file for subject $subject..."
 case "$conftype" in
   server)
     local commonname="Common Name (ex:ldap.$DOMAIN)"
@@ -336,6 +350,8 @@ emailAddress_max                 = 64
 
 EOT
     ;;
+  *)
+  DieLogging 12 "GenerateOpenSSLConf called in an unsupported automated mode ($automated)"
 esac
 
 cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
@@ -356,11 +372,11 @@ local certtype=$1
 local subject=$2
 
 if CheckIfExist $subject ; then
-  DieLogging 14 "GenerateCert: Trying to generate a $certtype certificate whic already exists ($subject)"
+  DieLogging 14 "GenerateCert: Trying to generate a $certtype certificate which already exists ($subject)"
 fi
 
 
-LogToSyslog "info" "User asked to Generate a certificate for subject $subject with type $certtype"
+LogToSyslog "debug" "User asked to Generate a certificate for subject $subject with type $certtype"
 case "$certtype" in
   server)
     CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)"
@@ -377,8 +393,8 @@ case "$certtype" in
   *)
     DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
 esac
-LogToSyslog "info" "Let's generate a $certtype certificate for user $subject"
-LogToSyslog "info" "Generating keys for subject $subject..." 
+LogToSyslog "debug" "Let's generate a $certtype certificate for user $subject"
+LogToSyslog "debug" "Generating keys for subject $subject..." 
   case "$automated" in
     yes|on)
       /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS > /dev/null 2>&1 || DieLogging 66 "GenerateCert cannot generate key for $subject"
@@ -392,23 +408,27 @@ LogToSyslog "info" "Generating keys for subject $subject..."
         /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
       fi
      ;;
+    *)
+    DieLogging 12 "GenerateCert called in an unsupported automated mode ($automated)"
   esac
-LogToSyslog "info" "Generating CSR for subject $subject..."
+LogToSyslog "debug" "Generating CSR for subject $subject..."
   /usr/bin/openssl req -new -config $dir/csr/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
-LogToSyslog "info" "Asking the CA to sign the certificate for $subject..."
+LogToSyslog "debug" "Asking the CA to sign the certificate for $subject..."
   case "$automated" in
     yes|on)
-      LogToSyslog "info" "-> automated mode is on..."
+      LogToSyslog "debug" "-> automated mode is on..."
       /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
     no|not|off)
-      LogToSyslog "info" "-> automated mode is off..."
+      LogToSyslog "debug" "-> automated mode is off..."
       /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
+    *)
+    DieLogging 12 "GenerateCert called in an unsupported automated mode ($automated)"
   esac
-LogToSyslog "info" "Extracting certificate for subject $subject..."
+LogToSyslog "debug" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
-LogToSyslog "info" "Verifying certificate for $subject..."
+LogToSyslog "debug" "Verifying certificate for $subject..."
   VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (INVALID) for subject $subject"
 PrintMessage "info" "Certificate ($certtype) generated for $subject:"
 PrintMessage "info" " - CA certificate: $dir/certs/ca.pem"
@@ -421,12 +441,15 @@ GenerateCRL() {
 # Will generate a new CRL
 case "$automated" in
   yes|on)
+    LogToSyslog "debug" "GenerateCRL asked to generate a new CRL"
     /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
   no|not|off)
     PrintMessage "info" "Generating a new CRL..."
     /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
+  *)
+  DieLogging 12 "GenerateCRL called in an unsupported automated mode ($automated)"
 esac
 # FIXME: seems not needed unless wanting to publish outside (which should be done at the end using a "publish" function?)
 #         to be seen when crl distribution point (see #5)
@@ -444,25 +467,28 @@ RevokeCert() {
 local subject=$1
 local reason=$2
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
+if ! VerifyCert $subject ; then
+  DieLogging 14 "RevokeCert: cerfiticate for subject $subject is already revoked!"
+fi
 case "$reason" in
   unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
-    LogToSyslog "info" "RevokeCert: is called to revoke certificate for subject $subjet with reason $reason"
+    LogToSyslog "debug" "RevokeCert: is called to revoke certificate for subject $subjet with reason $reason"
     local revocation_reason=$reason
     ;;
   "")
-    LogToSyslog "info" "RevokeCert: is called to revoke certificate for subject $subject with no reason, so defaulting to unspecified)"
+    LogToSyslog "debug" "RevokeCert: is called to revoke certificate for subject $subject with no reason, so defaulting to unspecified)"
     local revocation_reason="unspecified"
     ;;
   *)
-    LogToSyslog "notice" "RevokeCert: is called to revoke certificate for subject $subject with unknown reason ($reason), defaulting to unspecified" 
+    LogToSyslog "warn" "RevokeCert: is called to revoke certificate for subject $subject with unknown reason ($reason), defaulting to unspecified" 
     local revocation_reason="unspecified"
 esac
 
 PrintMessage "info" "Revoking certificate for $subject (reason = $revocation_reason):"
 case "$automated" in
   yes|on)
-    PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason > /dev/null 2>&1 || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+    PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     GenerateCRL || DieLogging 126 "RevokeCert cannot generate a CRL (automated mode is $automated)"
     PrintMessage "info" " - Generating a new CRL..."
     PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL has been generated."
@@ -472,6 +498,8 @@ case "$automated" in
     PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     PrintMessage "info" "You should think about generate a new CRL."
     ;;
+  *)
+  DieLogging 12 "RevokeCert called in an unsupported automated mode ($automated)"
 esac
 }
 
@@ -488,10 +516,10 @@ local regex=".*$subject.pem: OK\$"
 #       But most of the 2011-2014 systems are still shipped with OpenSSL 0.9.8y ... so, need to find a generic way
 
 if [[ $result =~ $regex ]]; then
-  LogToSyslog "info" "VerifyCert check OK: $result"
+  LogToSyslog "debug" "VerifyCert check OK: $result"
   return 0
 else 
-  LogToSyslog "info" "VerifyCert check INVALID: $result"
+  LogToSyslog "debug" "VerifyCert check INVALID: $result"
   return 1
 fi
 }
@@ -546,10 +574,10 @@ local errorcode=$1
 local message=$2
 case "$errorcode" in
   0|100)
-    PrintMessage "notice" "Nobody should die with exit return code 0 or 100 - called with message $message"
+    PrintMessage "warn" "Nobody should die with exit return code 0 or 100 - called with message $message"
     ;;
-  10|11|12|13|14)
-    PrintMessage "notice" "$message"
+  12)
+    PrintMessage "warn" "$message"
     ;;
   9|66)
     PrintMessage "emerg" "$message"
@@ -557,8 +585,14 @@ case "$errorcode" in
   1|2|126|255)
     PrintMessage "crit" "$message"
     ;;
+  13|14)
+    PrintMessage "debug" "$message"
+    ;;
+  10|11)
+    PrintMessage "info" "$message"
+    ;;
   *)
-    PrintMessage "notice" "Unknown Error Code($errorcode): called with message $message"
+    PrintMessage "warn" "Unknown Error Code($errorcode): called with message $message"
 esac
     PrintMessage "info" "Exiting with Error Code $errorcode..."
 exit $errorcode
@@ -569,7 +603,12 @@ LogToSyslog() {
 local priority=$1
 local message=$2
 case "$priority" in 
-  emerg|alert|crit|notice|info|debug)
+  debug)
+    if [ "$debugmode" == "yes" ]; then
+      /usr/bin/logger -p $loggerchan.$priority -t $loggertag "$priority - $message"
+    fi
+    ;;
+  emerg|alert|crit|notice|info)
     /usr/bin/logger -p $loggerchan.$priority -t $loggertag "$priority - $message"
     ;;
   err|error)
@@ -579,8 +618,8 @@ case "$priority" in
     /usr/bin/logger -p $loggerchan.warn -t $loggertag "$priority - $message"
     ;;
   *)
-    /usr/bin/logger -p $loggerchan.notice -t $loggertag "notice - syslog priority unknown -> $priority"
-    /usr/bin/logger -p $loggerchan.notice -t $loggertag "$priority - $message"
+    /usr/bin/logger -p $loggerchan.warning -t $loggertag "notice - syslog priority unknown -> $priority"
+    /usr/bin/logger -p $loggerchan.warning -t $loggertag "$priority - $message"
 esac
 }
 
@@ -589,14 +628,23 @@ PrintMessage() {
 local priority=$1
 local message=$2
 case "$priority" in
+  debug)
+    echo "----> $message" 
+    if [ "$debugmode" == "yes" ]; then
+      LogToSyslog "$priority" "$message"
+    fi
+    ;;
   info)
     echo "----> $message"
+    if [ "$debugmode" == "yes" ]; then
+      LogToSyslog "$priority" "$message"
+    fi
     ;;
-  notice)
+  warn|warning)
     echo "##### $message"
     LogToSyslog "$priority" "$message"
     ;;
-  warn|warning|crit)
+  crit|alert)
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo "!!!!! $message"
     LogToSyslog "$priority" "$message"
@@ -611,7 +659,7 @@ case "$priority" in
     ;;
   *)
     echo "????($priority)???? $message"
-    LogToSyslog "notice" "PrintMessage called with an unsupported priority ($priority)"
+    LogToSyslog "warn" "PrintMessage called with an unsupported priority ($priority)"
 esac
 }
 
@@ -681,8 +729,9 @@ case "$1" in
     ;;
   -crl|--crl|crl)
     CheckEnv
-    GenerateCRL
-    echo "A new CRL has been generated"
+    if GenerateCRL ; then
+      echo "A new CRL has been generated"
+    fi
     ;;
   -info|--info|info)
     CheckEnv
