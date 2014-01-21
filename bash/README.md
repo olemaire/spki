@@ -54,7 +54,7 @@ To select the Automated mode, make sure *yes* is the value for the "automated" v
 
     automated="yes"  # Define if SPKI must be full automated or not (yes/not)
     
-To configure the default fields of your PKI, modify the following variables to best suit your need (see #Tips and Tricks section of this document for some more infos). For example:
+To configure the default fields of your PKI, modify the following variables to best suit your need (see the "Tips and Tricks"" section of this document for some more infos). For example:
 
     # user/context variables - have to be changed depending on user/context
     COUNTRY="US"               # Country Code you want to registrer the PKI to (must be 2 letter country code)
@@ -130,7 +130,7 @@ Have a look at [Daniel Pocock Blog] page on this topic to help you find your bes
 
 
 # Playin'around
-## Big Guys need huge volume of certificates...
+## Big Guys need Big Certs... 
 **SPKI** can handle thousands of certificates like a charm, but how does it cope with millions? The correct answer is - so far I dunno :)
 
 More seriousely, actually, this [Bash] flavor has been tested with up to around 22.000 certificates, but no real tweaking has been done to see how far it can goes, and how we can steamlined its operation to cope with **huge** volume. 
