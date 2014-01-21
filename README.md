@@ -48,9 +48,23 @@ No matter the mode you are running on, the same CLI is provided, and pretty self
 
 For now, two types of certificates are delivered:
 
-1. **server** certificates: for machines SSL/TLS connections. Examples: HTTPS servers, OpenSSL gateways, ...
-2. **user** certificates: for authentication and mail protection (signing, encrypting). Example: <john.doe@mail.com> :)
+1. **server** certificates: for machines SSL/TLS connections, associated with a [FQDN].
 
+    They need to be **delivered for a DNS machine name** (ie: host.domain.tld)
+    
+    They can be used for the following x509 operations: TLS Web Server Authentication, TLS Web Client Authentication, Microsoft Server Gated Crypto, Netscape Server Gated Crypto.
+    
+    Common usage: HTTPS servers, OpenSSL gateways, ...
+    
+2. **user** certificates: for authentication and mail protection. 
+
+    They need to be **delivered for a Email** (ie: user@domain.tld)
+    
+    They can be used for the following x509 operations: TLS Web Client Authentication, E-mail Protection.
+    
+    Common usage: Mail certificate, HTTPS authentification certificate, OpenVPN user certificate, ...
+
+# Howto use **SPKI**
 ## Automatic mode
 In Automated mode, the usage is pretty straight and forward, and assume you know what you want to and want it done at light speed, even from a external script (for **SPKI** integration in broader system). 
 
@@ -139,78 +153,12 @@ Ok, we now have some certificates as we can see:
     Next CRL to be produced on:                 Feb 20 22:36:15 2014 GMT
     Current Status:                             OK
 
-And if you need more information a given certificate, just ask some more infos:
-
-    me@localhost:~/github/spki/bash$ ./spki --info openvpn.pki.me
-    Printing certificate information for openvpn.pki.me:
-    Certificate:
-    Data:
-        Version: 3 (0x2)
-        Serial Number: 4 (0x4)
-        Signature Algorithm: sha1WithRSAEncryption
-        Issuer: C=US, O=Senso-Rezo, OU=Senso-Rezo Security Services, CN=Senso-Rezo Root CA
-        Validity
-            Not Before: Jan 20 22:42:23 2014 GMT
-            Not After : Jan 21 22:42:23 2034 GMT
-        Subject: C=US, O=Senso-Rezo, OU=Operational Unit, CN=openvpn.pki.me/emailAddress=sysadm@senso-rezo.org
-        Subject Public Key Info:
-            Public Key Algorithm: rsaEncryption
-            RSA Public Key: (2048 bit)
-                Modulus (2048 bit):
-                    00:b6:08:58:8d:ac:94:cb:24:e4:0a:6c:6a:f2:63:
-                    bd:1e:50:e4:4d:eb:48:49:75:07:06:53:10:b9:27:
-                    ef:84:de:fd:8c:f2:54:a7:3c:21:b4:b1:36:e4:31:
-                    fd:80:e5:cf:4e:78:c3:b8:03:02:21:08:5f:bc:1f:
-                    da:eb:92:6c:f6:4e:58:78:37:42:cc:03:51:c7:5b:
-                    23:cd:05:10:05:8e:f4:f9:95:dc:67:b4:d0:04:4c:
-                    5f:1a:3b:03:72:30:49:d1:24:c9:f9:33:c1:48:ab:
-                    00:df:61:49:d6:cb:0f:a8:4f:b7:3c:5b:6f:73:65:
-                    4b:e7:d3:f3:4e:f2:f3:d6:d4:5c:98:4b:ab:ba:8e:
-                    a2:38:66:98:96:03:4d:d8:77:2d:a2:7c:a8:fb:c6:
-                    c7:c7:37:2b:32:2a:f9:81:28:9f:ce:dc:42:23:6a:
-                    02:fb:16:f5:7d:00:6e:28:6f:bc:66:52:8a:9c:f8:
-                    d8:e4:02:e3:d6:45:b7:80:31:20:c9:cd:6f:a6:70:
-                    f9:b7:fc:60:d9:53:73:69:8e:a1:c5:97:5d:8e:85:
-                    bb:ae:4a:7e:ac:cd:2a:6b:06:6b:88:25:ae:39:77:
-                    91:6d:bf:62:d4:7c:a1:9b:a6:ce:8b:19:a1:2c:91:
-                    ed:f1:0b:6f:ae:2c:2d:3b:04:70:e5:20:2a:f4:57:
-                    85:39
-                Exponent: 65537 (0x10001)
-        X509v3 extensions:
-            X509v3 Subject Key Identifier: 
-                75:DB:1E:67:B7:59:FA:DF:E6:1B:38:4A:75:B1:FD:79:45:81:65:95
-            X509v3 Authority Key Identifier: 
-                keyid:76:EC:2D:07:D8:14:17:1F:0D:C7:98:1A:0E:E9:AA:3A:D8:0D:84:7C
-
-            X509v3 Extended Key Usage: 
-                TLS Web Server Authentication, TLS Web Client Authentication, Microsoft Server Gated Crypto, Netscape Server Gated Crypto
-            X509v3 Basic Constraints: critical
-                CA:FALSE
-            Netscape Comment: 
-                SPKI Senso-Rezo Server Certificate
-    Signature Algorithm: sha1WithRSAEncryption
-        48:36:39:3e:70:f8:ce:cc:3d:0d:3d:32:72:5f:a7:e2:c7:3d:
-        77:0a:37:ee:a4:59:11:f3:85:5d:72:30:a9:6e:9d:6f:c4:7e:
-        76:8e:4a:a6:fe:c1:c9:a0:96:2e:4c:0e:0e:07:32:c6:23:2a:
-        84:b0:59:e5:a7:3b:aa:9a:80:93:ae:5c:73:49:50:b2:b3:5d:
-        b1:ed:d7:73:c4:90:08:d5:f5:ae:cf:fd:aa:34:fe:49:60:88:
-        4e:fd:30:9f:19:d2:49:00:f7:41:4e:56:b8:c1:29:2f:38:2f:
-        64:a8:6b:ad:38:50:7f:34:c8:78:ff:be:cd:2f:17:a0:42:17:
-        9a:17:ec:c8:e0:66:9e:53:5a:55:f5:ac:de:c2:25:2c:ea:eb:
-        59:1b:b7:12:da:bd:61:28:59:5d:f1:02:ec:1d:83:5b:e4:f1:
-        c4:94:c1:80:08:21:a4:bf:a2:1e:13:93:4f:23:53:39:62:7e:
-        ee:54:6c:5b:11:f2:81:0f:4c:84:ce:9c:df:db:5a:df:c6:bb:
-        71:3d:ca:39:0d:ae:9d:c1:8f:76:d1:6e:0e:b2:6f:3f:93:b8:
-        24:86:f7:2b:a7:86:ab:e4:32:92:ae:bb:78:16:82:f4:90:99:
-        6d:6a:9e:1a:16:ab:85:c9:a1:15:c7:67:f2:12:56:bd:3e:6d:
-        b1:80:35:ac
-    me@localhost:~/github/spki/bash$
     
 ### Let's verify and revoke somes...
 
 A certificate is considered VALID if not revoked nor expired, and if it has been delivered by **SPKI** (signed by your Certificate Authority more precisely). In expired, or revoked (or a foreign - to your PKI - certificate), it will be considered INVALID.
 
-To verify a given certificate, just issue the *--verify* command:
+To verify a given certificate, just issue the `--verify` command:
 
     me@localhost:~/github/spki/bash$ ./spki --verify openvpn.pki.me
     Certificate for openvpn.pki.me is VALID
@@ -224,6 +172,7 @@ Let's revoke a cerficate this certificate:
     me@localhost:~/github/spki/bash$ ./spki --revoke openvpn.pki.me
     ----> Revoking certificate for openvpn.pki.me (reason = unspecified):
     ---->  - Certificate for subject openvpn.pki.me has been revoked for reason unspecified.
+    ---->  - Generating a new CRL...
     ----> Certificate for subject openvpn.pki.me has been revoked and a new CRL has been generated.
     me@localhost:~/github/spki/bash$
 
@@ -249,7 +198,7 @@ As you'll see, it...
 ... not implemented yet, but I'm working on it :)
 
 ### Some more informations?
-You can use the *--info* option to grab more infos about the CA certificate and the CRL. 
+You can use the `--info` option to grab more infos about the CA certificate and the CRL. 
 
     me@localhost:~/github/spki/bash$ ./spki --infos ca
     Printing certificate information for ca:
@@ -365,7 +314,7 @@ You can use the *--info* option to grab more infos about the CA certificate and 
         12:b0:f2:0e
     me@localhost:~/github/spki/bash$
 
-Option *--info* used without subject will give you more information regarding your **SPKI** Certificate Authority:
+Option `--info` used without subject will give you more information regarding your **SPKI** Certificate Authority:
 
     me@localhost:~/github/spki/bash$ ./spki --info
     General info on the Certificate Authority:
@@ -379,7 +328,7 @@ Option *--info* used without subject will give you more information regarding yo
     Next CRL to be produced on:                 Feb 20 23:14:13 2014 GMT
     Current Status:                             OK
 
-And of course you can use *--info* to look for information on a given certificate:
+And of course you can use `--info` to look for information on a given certificate:
 
     me@localhost:~/github/spki/bash$ ./spki --info john.doe@pki.me
     Printing certificate information for john.doe@pki.me:
@@ -509,12 +458,42 @@ And of course you can use *--info* to look for information on a given certificat
         dd:5f:0b:1c
         
 ### But sometimes, things can go weird...
-{:toc}
-This is a test TOC entry
+**SPKI** will try to detect most typo errors and make sure the operation you are asking for are safe before proceeding. If not, you will exit, printing an Error Code with an helping message and casting a Return Code equal to the Error Code:
+
+    me@localhost:~/github/spki/bash$ ./spki --user jane.did@pki.me
+    ##### GenerateCert: Trying to generate a user certificate whic already exists (jane.did@pki.me)
+    ----> Exiting with Error Code 14...
+    me@localhost:~/github/spki/bash$ echo $?
+    14
+    me@localhost:~/github/spki/bash$ ./spki --info jack.hack@pki.me
+    ##### PrintCertInfo: Subject  does not exists!
+    ----> Exiting with Error Code 13...
+    me@localhost:~/github/spki/bash$ echo $?
+    13 
+    me@localhost:~/github/spki/bash$
+    
+**SPKI** will also make sure your operation are valid before proceeding:
+
+    me@localhost:~/github/spki/bash$ ./spki --user www.google.com
+    ##### GenerateCert cannot generate a certificate for invalid EMAIL (www.google.com)
+    ----> Exiting with Error Code 12...
+    me@localhost:~/github/spki/bash$ ./spki --user super@man
+    ##### GenerateCert cannot generate a certificate for invalid EMAIL (super@man)
+    ----> Exiting with Error Code 12...
+    me@localhost:~/github/spki/bash$ ./spki --server julia.robert@pki.me
+    ##### GenerateCert cannot generate a certificate for invalid FQDN (julia.robert@pki.me)
+    ----> Exiting with Error Code 12...
+    me@localhost:~/github/spki/bash$ echo $?
+    12
+    me@localhost:~/github/spki/bash$
+    
+**SPKI** Error Codes are presented in the `doc/` section of this present Github repository.
+
         
 ## The Manual Way
+FIXMETOBEDONE
 
 # Credits
-Thank's to ... tons of folks I did meet the last 15 years around the PKI(X most of the time) subject :)
+Thank's to ... tons of folks I did meet the last 15 years around the (S)PKI(X) subject :)
 
 If you are new to the PKI world, an excellent tutorial on implementing a real-world PKI with the [OpenSSL] toolkit can be found there: [http://pki-tutorial.readthedocs.org](http://pki-tutorial.readthedocs.org "")

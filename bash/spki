@@ -465,6 +465,7 @@ case "$automated" in
     PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason > /dev/null 2>&1 || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
     GenerateCRL || DieLogging 126 "RevokeCert cannot generate a CRL (automated mode is $automated)"
+    PrintMessage "info" " - Generating a new CRL..."
     PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL has been generated."
     ;;
   no|not|off)
@@ -545,23 +546,23 @@ DieLogging() {
 # exit with error code and associated message, sysloging too.
 local errorcode=$1
 local message=$2
-echo "Error Code: $errorcode - $message - Exiting..."
 case "$errorcode" in
   0|100)
-    LogToSyslog "notice" "(notice) - nobody should die with exit return code 0 or 100 - called with message $message"
+    PrintMessage "notice" "Nobody should die with exit return code 0 or 100 - called with message $message"
     ;;
   10|11|12|13|14)
-    LogToSyslog "notice" "$message"
+    PrintMessage "notice" "$message"
     ;;
   66)
-    LogToSyslog "emerg" "$message"
+    PrintMessage "emerg" "$message"
     ;;
   1|2|126|255)
-    LogToSyslog "crit" "$message"
+    PrintMessage "crit" "$message"
     ;;
   *)
-    LogToSyslog "notice" "(notice) - Unknown Error Code - $errorcode - called with message $message"
+    PrintMessage "notice" "Unknown Error Code($errorcode): called with message $message"
 esac
+    PrintMessage "info" "Exiting with Error Code $errorcode..."
 exit $errorcode
 }
 
