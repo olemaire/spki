@@ -15,9 +15,9 @@
 It's up to you to select the flavor that fits you best: both are released under BSD revised license.
 
 # Installation & Configuration
-See related flavor ([Bash] and [Perl]) Installation pages: browse the associated direction and have a look at their README file.
+See related flavor ([Bash] and [Perl]) Installation pages: browse the associated directory and have a look at their README file.
 
-**SPKI** is designed to ease operations and you will need to configure the default options/fields you want to use in operation mode: this won't last longer than editing a file anyway, and will have to be done once at initialisation time.
+**SPKI** is designed to ease operations and you will need to configure the default options/fields you want to use in operation mode: this won't take longer than editing a file anyway, and will have to be done only once at initialisation time.
 
 During this installation and initialisation phase, you will have to decide for the mode you want to run **SPKI**:
 
