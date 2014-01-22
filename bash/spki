@@ -283,7 +283,7 @@ LogToSyslog "debug" "Issuing the first Certificate Revocation List"
   /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
 
 PrintMessage "alert" "$COMPANY Root Certificate Authority is initialized."
-PrintMessage "info" "SPKI ready to server" ; echo "" ; echo ""
+PrintMessage "info" "SPKI ready for service" ; echo ""
 InfoOnCA
 }
 
