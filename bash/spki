@@ -256,6 +256,8 @@ IssueCert() {
 local certtype=$1
 local subject=$2
 
+CheckEnv # Start making sure the PKI environment is ok
+
 CheckCertType $certtype || DieLogging 12 "IssueCert cannot issue a certificate of an unsupported type ($certtype)"
 
 LogToSyslog "debug" "User ask to Issue a type $certtype certificate for subject $subject - checking"
@@ -484,6 +486,9 @@ PrintMessage "info" "Have a nice day."
 
 GenerateCRL() {
 # Will generate a new CRL
+
+CheckEnv # Start making sure the PKI environment is OK
+
 case "$automated" in
   yes|on)
     LogToSyslog "debug" "GenerateCRL asked to generate a new CRL"
@@ -509,6 +514,8 @@ LogToSyslog "info" "A new CRL has been generated and CRL directory rehashed"
 
 RenewCert() {
 # Will renew the certificate for subject $1 with reason $2 (must exists - see CheckIfExists)
+
+CheckEnv # Start making sure the PKI environment is OK
 
 # to allow --renew (server,user) subject (reason) and --renew subject (resaon)
 case "$1" in
@@ -550,6 +557,8 @@ PrintMessage "info" "RenewCert of $subject for reason $reason - Not Implemented 
 
 RevokeCert() {
 # Will revoke the certificate for subject $1 (must exists - see CheckIfExists)
+
+CheckEnv # Start making sure the PKI environment is OK
 
 # to allow --revoke (server,user) subject - and --revoke subject
 case "$1" in
@@ -612,6 +621,9 @@ esac
 VerifyCert() {
 # Will verify certificate for subjet $1 (must exists - see CheckIfExist)
 local subject=$1
+
+CheckEnv # Start making sure the PKI environment is OK.
+
 CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
 local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
@@ -632,6 +644,9 @@ fi
 
 PrintCRLInfo() {
 # Will print human readable info about current CRL
+
+CheckEnv # Start making sure the PKI environment is OK
+
 if [ ! -f $dir/crl/current_crl.pem ]; then
   DieLogging 13 "PrintCRLInfo: no CRL present!"
 else 
@@ -643,12 +658,19 @@ fi
 InfoOnCRL() {
 # Will print human readable infos regarding CRL
 
+CheckEnv # Start making sure the PKI environment is OK
+
+local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
+local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
-# auand elle a ete issue
-# auand elle devra au max etre re issuee
+echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
+echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
+######### auand elle a ete issue
+######### auand elle devra au max etre re issuee
 # combien de jour resrant
-# combien de certificates issues existent
+# combien de certificates revokés existent
 # qui la signee
 # ou est son point de distrubution 
 PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
@@ -658,6 +680,8 @@ PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
 InfoOnCert() {
 # Will print human readable infos on certificates
 local subject=$1
+
+CheckEnv # Start making sure the PKI environment is OK
 
 echo "Certificate usefull informations:"
 echo "---------------------------------"
@@ -704,6 +728,9 @@ echo "Current Status:                             OK"
 PrintCertInfo() {
 # Will print human readable info regarding a given certificate - if exists (else die)
 local subject=$1
+
+CheckEnv # Start making sure the PKI environmnent is OK
+
 CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $2 does not exists!"
 echo "Printing certificate information for $subject:" 
 /usr/bin/openssl x509 -text -in $dir/certs/$subject.pem -noout || DieLogging 66 "PrintCertInfo: error trying to print Cert information for $subject"
@@ -850,11 +877,9 @@ case "$1" in
     InitializeCA
     ;;
   -issue|--issue|issue)
-    CheckEnv
     IssueCert $2 $3
     ;;
   -verify|--verify|verify)
-    CheckEnv 
     if VerifyCert $2 ; then
       echo "Certificate for $2 is VALID"
       exit 0
@@ -864,21 +889,17 @@ case "$1" in
     fi
     ;;
   -renew|--renew|renew)
-    CheckEnv
     RenewCert $2 $3 $4
     ;;
   -revoke|--revoke|revoke)
-    CheckEnv
     RevokeCert $2 $3 $4
     ;;
   -crl|--crl|crl)
-    CheckEnv
     if GenerateCRL ; then
       echo "A new CRL has been generated"
     fi
     ;;
   -print|--print|print)
-    CheckEnv
     case "$2" in
       crl)
         PrintCRLInfo 
@@ -891,7 +912,6 @@ case "$1" in
     esac
     ;;
   -info|--info|info)
-    CheckEnv
     case "$2" in
       crl)
         InfoOnCRL
