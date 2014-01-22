@@ -14,6 +14,23 @@
 
 It's up to you to select the flavor that fits you best: both are released under BSD revised license.
 
+**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
+- [Installation & Configuration](#installation--configuration)
+- [Usages](#usages)
+- [Howto use SPKI](#howto-use-spki)
+	- [Automatic mode](#automatic-mode)
+		- [First: Initialize your Certificate Authority](#first-initialize-your-certificate-authority)
+		- [Then, let's create some Certificates](#then-lets-create-some-certificates)
+		- [Let's verify and revoke somes...](#lets-verify-and-revoke-somes)
+		- [And what about renewing some certificates?](#and-what-about-renewing-some-certificates)
+		- [Some more informations?](#some-more-informations)
+		- [But sometimes, things can go weird...](#but-sometimes-things-can-go-weird)
+	- [The Manual Way](#the-manual-way)
+- [Credits](#credits)
+
+
+
 # Installation & Configuration
 See related flavor ([Bash] and [Perl]) Installation pages: browse the associated directory and have a look at their README file.
 
