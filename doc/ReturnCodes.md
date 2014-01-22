@@ -16,7 +16,9 @@ warn  | 12      | Illegal function call                 | ex: calling SPKI with 
 debug | 13      | Element does not exists               | ex: trying to revoke a non existent certificate
 debug | 14      | Element already exists                | ex: trying to generate a certificate that already exists and is valid
 alert | 15      | Attempt to modify a Protected Element | ex: trying to generate a certificate for subject "ca" or "crl"
+alert | 15      | CRL has Expired                       | Will immediately generate a new one
 emerg | 66      | OpenSSL error                         | ex: OpenSSL misused or cannot perform
+emerg | 67      | CA Certificate is NOT VALID           | ex: CA certificate expired or file corrupted
 none  | 100     | Certificate is Invalid                | ex: verifying an invalid certificate
 crit  | 126-165 | Bash reserved                         | See [Bash Return Codes]
 crit  | 255     | Bash reserved                         | See [Bash Return Codes]

@@ -44,13 +44,43 @@ CheckEnv() {
 # Check if the CA is operational
 if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ] || [ ! -f $CONFIG_CA ] || [ ! -f $dir/crl/current_crl.pem ] || [ ! -f $dir/datas/index ]; then
   PrintMessage "emerg" "Check CA Environment reveal no pre-existing or broken CA"
-  echo "##### Please run '$0 --init' to initalize a new Certificate Authority"
+  echo "***** Please run '$0 --init' to initalize a new Certificate Authority"
   DieLogging 11 "The Certificate Authority has not (yet) been Initialized"
+fi
+
+# Check that the CRL is not Expired, and if so, regenerate one - see ticket #18
+# -> verifying the CA certificate
+# -> if verification return message ends by "CRL has expired", we need to regenerate a new CRL -> let's do it!
+# -> verifying the CA certificate again, with the assurance the CRL is ok now.
+# -> if CA certificate not VALID, then the CA IS NOT OPERATIONAL (cert expired or file corrupted -> to be investigated by admins)
+
+local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
+local regexexpired=".*CRL has expired"
+local regexok=".*ca.pem: OK\$"
+
+LogToSyslog "debug" "CheckEnv: CRL Expiry verification"
+if [[ $result =~ $regexexpired ]]; then
+  LogToSyslog "alert" "CheckEnv detected an Expired CRL"
+  LogToSyslog "alert" "CheckEnv regenerating a new CRL" 
+  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
+  LogToSyslog "alert" "CheckEnv has regenerated a new CRL" 
+else
+  LogToSyslog "debug" "CheckEnv: CRL Expiry verification is OK"
+fi
+
+LogToSyslog "debug" "CheckEnv: CRL Expiry verification"
+result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
+if [[ $result =~ $regexok ]]; then
+  LogToSyslog "debug" "CheckEnv: CA Certificate validy verification is OK"
+else
+  PrintMessage "emerg" "The Certificate Authority root certificate is not (anymore?) valid!!!"
+  echo "***** ADMNINISTRATIVE ACTION REQUIRED"
+  DieLogging 67 "The Certificate Authority is not operational"
 fi
 }
 
 CheckConfig() {
-# Check if config is consistent
+# Check if config is consistent - done at each startup anyway
 case "$automated" in
   yes|on|no|not|off)
     LogToSyslog "debug" "CheckConfig: automated mode asked is supported ($automated)"
@@ -629,6 +659,7 @@ CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regex=".*$subject.pem: OK\$"
 
+# if CRL expried-> CRL has expired - see #18
 #       With OpenSSL 1.0.1y (and counting), the verify --CRLfile file.pem could do (undocumented but working option) in association with --CAfile ca.pem
 #       That should avoid to use c_rehash at each CRL generation
 #       But most of the 2011-2014 systems are still shipped with OpenSSL 0.9.8y ... so, need to find a generic way
@@ -766,7 +797,7 @@ case "$errorcode" in
   12)
     PrintMessage "warn" "$message"
     ;;
-  9|66)
+  9|15|66|67)
     PrintMessage "emerg" "$message"
     ;;
   1|2|126|255)
