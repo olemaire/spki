@@ -731,7 +731,7 @@ local subject=$1
 
 CheckEnv # Start making sure the PKI environmnent is OK
 
-CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $2 does not exists!"
+CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $subject does not exists!"
 echo "Printing certificate information for $subject:" 
 /usr/bin/openssl x509 -text -in $dir/certs/$subject.pem -noout || DieLogging 66 "PrintCertInfo: error trying to print Cert information for $subject"
 }
