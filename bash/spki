@@ -695,20 +695,19 @@ local crlissuer=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem 
 local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
 local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 local crlnumber=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -crlnumber) || DieLogging 66 "PrintCAInfo> cannot stat on CRL number"
+local crlnumbernb=${crlnumber//crlNumber=/}
 local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep "Serial Number:" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
-#./spki print crl|grep "Serial Number:"
 
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
 echo "Certificate Authority that issued:          ${crlissuer//issuer=/}"
-echo "CRL serial number:                          ${crlnumber//[[:space:]]/}" # FIXME : remove the "crlNumber=" 
+echo "CRL serial number:                          ${crlnumbernb//[[:space:]]/}"
 echo "CRL produced on:                            ${lastcrldate//lastUpdate=/}"
-echo "CRL next update on:                         ${nextcrldate//nextUpdate=/}"
+echo "CRL next update on (at max):                ${nextcrldate//nextUpdate=/}"
 echo "Number of Revoked Certificates:             ${revokedcertnb//[[:space:]]/}"
 echo "Current Status:                             OK" # Sure as CheckEnv will deal the case if the CRL was expired - see #18
 #TODO: where is the distribution point - to be done when coded (see #5 and #10)
 
-PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
 
 }
 
