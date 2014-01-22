@@ -599,7 +599,43 @@ else
 fi
 }
 
-PrintCAInfo() {
+InfoOnCRL() {
+# Will print human readable infos regarding CRL
+
+echo "Certificate Revocation List (CRL) info:"
+echo "---------------------------------------"
+# auand elle a ete issue
+# auand elle devra au max etre re issuee
+# combien de jour resrant
+# combien de certificates issues existent
+# qui la signee
+# ou est son point de distrubution 
+PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
+
+}
+
+InfoOnCert() {
+# Will print human readable infos on certificates
+local subject=$1
+
+echo "Certificate usefull informations:"
+echo "---------------------------------"
+#echo "Certificate issued by:                      ${caissuer//issuer=\ \//}"
+#echo "Start Validity on:                          ${castartdate//notBefore=/}"
+#echo "End Validity on:                            ${caenddate//notAfter=/}"
+#echo "Current Status:                             OK"
+#-serial
+#-subject
+#-issuer
+#-email
+#-alias ?
+# si il est pas revoke ou expire (son statut de validité)
+# son type *user,server...
+
+PrintMessage "debug" "InfoOnCert ($subject): Not Implemented Yet"
+}
+
+InfoOnCA() {
 # Will print human readable info regarding the CA
 local myhost=$HOSTNAME
 local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
@@ -817,15 +853,13 @@ case "$1" in
     CheckEnv
     case "$2" in
       crl)
-        echo "Not Implemented Yet"
-        #PrintCRLInfo 
+        InfoOnCRL
         ;;
       ""|ca)
-        PrintCAInfo
+        InfoOnCA
         ;;
       *)
-        echo "Not Implemented Yet"
-        #PrintCertInfo $2
+        InfoOnCert $2
     esac
     ;;
   -status|--status|status)
