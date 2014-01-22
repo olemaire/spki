@@ -723,11 +723,15 @@ local certissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -iss
 local certsubject=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -subject -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Subject from $subject certificate"
 local certserial=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -serial) || DieLogging 66 "InfoOnCert: cannot stat Serial from $subject certificate"
 local certemail=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -email) || DieLogging 66 "InfoOnCert: cannot stat Email from $subject certificate"
-local certalias="FIXME"
+local certalias=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -alias) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
 local certpurpose="FIXME"
 local certstartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
 local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
-local certcurrentstatus="FIXME"
+if VerifyCert $subject ; then
+  local certcurrentstatus="VALID"
+else
+  local certcurrentstatus="INVALID"
+fi
 
 echo "Certificate usefull informations:"
 echo "---------------------------------"
@@ -750,6 +754,9 @@ PrintMessage "debug" "InfoOnCert ($subject): Not Implemented Yet"
 
 InfoOnCA() {
 # Will print human readable info regarding the CA
+
+CheckEnv # Start making sure the PKI environment is OK
+
 local myhost=$HOSTNAME
 local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
 local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
