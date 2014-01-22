@@ -276,10 +276,10 @@ GenerateCert "$certtype" "$subject"
 CheckCertType() {
 # Check if $1 (type) is a valid/supported type (server or user) - if ok return 0, else return 1
 local checktype=$1
-LogToSyslog "debug" "FIXME"
+
 case "$checktype" in
   server|user)
-    LogToSyslog "debug" "CheckCertType checked a supported Certificate Type ($checktype)"
+    LogToSyslog "debug" "CheckCertType checked a supported Certificate Type ($checktype) - OK"
     return 0
     ;;
   *)
@@ -509,9 +509,29 @@ LogToSyslog "info" "A new CRL has been generated and CRL directory rehashed"
 
 RevokeCert() {
 # Will revoke the certificate for subject $1 (must exists - see CheckIfExists)
-local subject=$1
-local reason=$2
+
+# to allow --revoke (server,user) subject - and --revoke subject
+case "$1" in
+  server|user)
+    local subject=$2
+    local reason=$3
+    ;;
+  *)
+    local subject=$1
+    local reason=$2
+esac
+
+# This Check ash to be kept - unless we want to revoke the CA !
+case "$subject" in
+  ca|crl)
+    DieLogging 15 "RevokeCert: Illegal Operation for a protected subject ($subject)"
+    ;;
+  *)
+    LogToSyslog "debug" "User asked to Generate a certificate for subject $subject with type $certtype"
+esac
+
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
+
 if ! VerifyCert $subject ; then
   DieLogging 14 "RevokeCert: cerfiticate for subject $subject is already revoked!"
 fi
@@ -772,7 +792,7 @@ case "$1" in
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
-    RevokeCert $2 $3
+    RevokeCert $2 $3 $4
     ;;
   -crl|--crl|crl)
     CheckEnv
@@ -828,6 +848,4 @@ esac
 
 # TODO:
 # * deal with publication (CA cert, certs, crl) on a repository (see with OpenSSL configuration for CRL distribution)
-# * reclassify most LogToSyslog "info" to "debug" - and make sure to deal with verbosity/debugmode (dropping debug by default)
-# * check automated mode at startup - and die if not supported -> will reduce DieLogging 12 in tons of case $automated..
 # - This Is The End
