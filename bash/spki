@@ -660,19 +660,21 @@ InfoOnCRL() {
 
 CheckEnv # Start making sure the PKI environment is OK
 
+local crlissuer=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
 local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
 local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
+echo "Certificate Authority that issued:          ${crlissuer//issuer=/}"
 echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
 echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
+######## qui la signee
 ######### auand elle a ete issue
 ######### auand elle devra au max etre re issuee
 # combien de jour resrant
 # combien de certificates revokés existent
-# qui la signee
-# ou est son point de distrubution 
+#TODO: where is the distribution point - to be done when coded (see #5 and #10)
 PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
 
 }
