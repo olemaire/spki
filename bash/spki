@@ -276,7 +276,8 @@ PrintMessage "info" "Initializing user environment (directories and indexes)..."
 
 LogToSyslog "debug" "Issuing the first Certificate Revocation List"
   /bin/cp $dir/certs/ca.pem $dir/crl/ca.pem || DieLogging 126 "InitializeCA cannot copy CA certificate to CRL directory"
-  GenerateCRL || DieLogging 126 "InitializeCA cannot generate the first CRL"
+  #GenerateCRL || DieLogging 126 "InitializeCA cannot generate the first CRL"
+  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
 
 PrintMessage "alert" "$COMPANY Root Certificate Authority initialized successfully."
 }
