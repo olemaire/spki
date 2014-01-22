@@ -42,7 +42,7 @@ debugmode="no"                           # Activate/Desactivate the debug mode (
 ## FUNCTIONS
 CheckEnv() {
 # Check if the CA is operational
-if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ] || [ ! -f $CONFIG_CA ] || [ ! -f $dir/crl/current_crl.pem ]; then
+if [ ! -f $dir/certs/ca.pem ] || [ ! -f $dir/private/ca.key ] || [ ! -f $CONFIG_CA ] || [ ! -f $dir/crl/current_crl.pem ] || [ ! -f $dir/datas/index ]; then
   PrintMessage "emerg" "Check CA Environment reveal no pre-existing or broken CA"
   echo "##### Please run '$0 --init' to initalize a new Certificate Authority"
   DieLogging 11 "The Certificate Authority has not (yet) been Initialized"
