@@ -251,6 +251,43 @@ LogToSyslog "debug" "Issuing the first Certificate Revocation List"
 PrintMessage "alert" "$COMPANY Root Certificate Authority initialized successfully."
 }
 
+IssueCert() {
+# Issue Certificate with type $1 for subject $2
+local certtype=$1
+local subject=$2
+
+CheckCertType $certtype || DieLogging 12 "IssueCert cannot issue a certificate of an unsupported type ($certtype)"
+
+LogToSyslog "debug" "User ask to Issue a type $certtype certificate for subject $subject - checking"
+case "$certtype" in
+  server)
+    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a $certtype certificate for invalid FQDN ($subject)"
+  ;;
+  user)
+    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a $certtype certificate for invalid EMAIL ($subject)"
+  ;;
+  *)
+    DieLogging 12 "IssueCert asked for an Unknown type of certificate asked ($certtype)"
+esac
+
+GenerateCert "$certtype" "$subject"
+}
+
+CheckCertType() {
+# Check if $1 (type) is a valid/supported type (server or user) - if ok return 0, else return 1
+local checktype=$1
+LogToSyslog "debug" "FIXME"
+case "$checktype" in
+  server|user)
+    LogToSyslog "debug" "CheckCertType checked a supported Certificate Type ($checktype)"
+    return 0
+    ;;
+  *)
+    LogToSyslog "debug" "CheckCertType checked an unsupported Certificate Type ($checktype)"
+    return 1
+esac
+}
+
 CheckSubject() {
 # Check if $2 (subject) is a valid subject (server fqdn or email) depending on type (server=fqdn,user=email) - if ok return 0, else return 1
 local checktype=$1
@@ -258,10 +295,10 @@ local subject=$2
 LogToSyslog "debug" "Checking if $subject if of type $checktype..."
 case "$checktype" in
   fqdn)
-    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*\$" #FIXME: wildcard not supported with this regexp
+    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*\$" #FIXME: wildcard not supported with this regexp - review this regexp as too permissive anyway
   ;;
   email)
-    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+    local regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$" #FIXME: review this regexp as seems too permissive
   ;;
   *)
     DieLogging 12 "Illegal function call: CheckSubject with type $checktype"
@@ -371,21 +408,29 @@ GenerateCert() {
 local certtype=$1
 local subject=$2
 
+# This Check ash to be kept - unless we want to be able to re-sign a CA (renewal) - not inplemented so far.
+case "$subject" in
+  ca|crl)
+    DieLogging 15 "GeneratCert: Illegal Operation for a protected subject ($subject)"
+    ;;
+  *)
+    LogToSyslog "debug" "User asked to Generate a certificate for subject $subject with type $certtype"
+esac
+
+# Refuse to generate a certificate for an already existing subject
 if CheckIfExist $subject ; then
   DieLogging 14 "GenerateCert: Trying to generate a $certtype certificate which already exists ($subject)"
 fi
 
-
-LogToSyslog "debug" "User asked to Generate a certificate for subject $subject with type $certtype"
 case "$certtype" in
   server)
-    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)"
+    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)" #FIXME should not be needed as called by IssueCert
     GenerateOpenSSLConf "server" "$subject" 
     local certdays=$SERVER_DAYS
     local extensions="server_cert"
   ;;
   user)
-    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)"
+    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)" #FIXME shoud not be needed as called by IssueCert
     GenerateOpenSSLConf "user" "$subject" 
     local certdays=$USER_DAYS
     local extensions="user_cert"
@@ -585,6 +630,9 @@ case "$errorcode" in
   1|2|126|255)
     PrintMessage "crit" "$message"
     ;;
+  15)
+    PrintMessage "alert" "$message"
+    ;;
   13|14)
     PrintMessage "debug" "$message"
     ;;
@@ -670,26 +718,28 @@ echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 Usage: spki <option> (<subject>) 
 
 Available options are:
-    --init                           Initialize a new Certiciate Authority.
-    --server <fqdn>                  Generate a Server certificate.
-    --user <email>                   Generate an User certificate.
-    --verify <email,fqdn>            Verify a given certificate.
-    --renew <email,fqdn> (reason)    Renew a given certificate.
-    --revoke <email,fqdn> (reason)   Revoke a given certificate.
-    --crl                            Generate a Certificate Revocation List.
-    --info <email,fqdn,ca,crl>       Will display human readable infos on certificate/CRL
-    --status                         Will give information on the SPKI status.
-    --help                           Display this short help message.
+    --init                           Initialize a new Certiciate Authority
+    --issue <type> <subject>         Issue a certificate of <type> for <subject>
+            server <fqdn>              issue a Server certificate
+            user <email>               issue an User certificate
+    --verify <email,fqdn>            Verify a given certificate
+    --renew <email,fqdn> (reason)    Renew a given certificate
+    --revoke <email,fqdn> (reason)   Revoke a given certificate
+    --crl                            Generate a Certificate Revocation List
+    --print <email,fqdn,ca,crl>      Will display a raw print of certificate/CRL
+    --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
+    --status                         Will give an overall status of operatin of SPKI
+    --help                           Display this short help message
 
 Exemples:
-	spki --server www.senso-rezo.org
+        spki --issue server www.senso-rezo.org
+	spki --issue user olivier.lemaire@senso-rezo.org
         spki --info www.senso-rezo.org
-	spki --user olivier.lemaire@senso-rezo.org
         spki --revoke ldap.senso-rezo.org
 	spki --revoke www.senso-rezo.org keyCompromise
 	spki --renew olivier.lemaire@senso-rezo.org
 	spki --crl
-        spki --info crl
+        spki --print crl
 
 "
 }
@@ -697,17 +747,14 @@ Exemples:
 ## MAIN
 
 CheckConfig
+
 case "$1" in
   -init|--init|init)
     InitializeCA
     ;;
-  -server|--server|server)
+  -issue|--issue|issue)
     CheckEnv
-    GenerateCert "server" $2
-    ;;
-  -user|--user|user)
-    CheckEnv
-    GenerateCert "user" $2
+    IssueCert $2 $3
     ;;
   -verify|--verify|verify)
     CheckEnv 
@@ -733,17 +780,32 @@ case "$1" in
       echo "A new CRL has been generated"
     fi
     ;;
-  -info|--info|info)
+  -print|--print|print)
     CheckEnv
     case "$2" in
       crl)
         PrintCRLInfo 
         ;;
-      "")
-        PrintCAInfo
+      ""|ca)
+        PrintCertInfo ca
         ;;
       *)
         PrintCertInfo $2
+    esac
+    ;;
+  -info|--info|info)
+    CheckEnv
+    case "$2" in
+      crl)
+        echo "Not Implemented Yet"
+        #PrintCRLInfo 
+        ;;
+      ""|ca)
+        PrintCAInfo
+        ;;
+      *)
+        echo "Not Implemented Yet"
+        #PrintCertInfo $2
     esac
     ;;
   -status|--status|status)

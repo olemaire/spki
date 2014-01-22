@@ -7,18 +7,19 @@
 
 Severity Level  | Return Code | Meaning                           | Observations
 :--------------:|:----------:| :-------------------------------- | :-----------------
-none  | 0       | command was perfomed with success | ex: Generating a new certificate with success
-crit  | 1-2     | Bash reserved                     | See [Bash Return Codes] 
-emerg | 9       | Illegal configuration parameter   | ex: configuring with an unsupported automated mode
-info  | 10      | Operation Aborted by user         | ex: answering NO to a confirmation and exiting
-info  | 11      | CA not initialized                | ex: trying an operation before the CA has been initalized
-warn  | 12      | Illegal function call             | ex: calling SPKI with unknown function
-debug | 13      | Element does not exists           | ex: trying to revoke a non existent certificate
-debug | 14      | Element already exists            | ex: trying to generate a certificate that already exists and is valid
-emerg | 66      | OpenSSL error                     | ex: OpenSSL misused or cannot perform
-none  | 100     | Certificate is Invalid            | ex: verifying an invalid certificate
-crit  | 126-165 | Bash reserved                     | See [Bash Return Codes]
-crit  | 255     | Bash reserved                     | See [Bash Return Codes]
+none  | 0       | command was perfomed with success     | ex: Generating a new certificate with success
+crit  | 1-2     | Bash reserved                         | See [Bash Return Codes] 
+emerg | 9       | Illegal configuration parameter       | ex: configuring with an unsupported automated mode
+info  | 10      | Operation Aborted by user             | ex: answering NO to a confirmation and exiting
+info  | 11      | CA not initialized                    | ex: trying an operation before the CA has been initalized
+warn  | 12      | Illegal function call                 | ex: calling SPKI with unknown function
+debug | 13      | Element does not exists               | ex: trying to revoke a non existent certificate
+debug | 14      | Element already exists                | ex: trying to generate a certificate that already exists and is valid
+alert | 15      | Attempt to modify a Protected Element | ex: trying to generate a certificate for subject "ca" or "crl"
+emerg | 66      | OpenSSL error                         | ex: OpenSSL misused or cannot perform
+none  | 100     | Certificate is Invalid                | ex: verifying an invalid certificate
+crit  | 126-165 | Bash reserved                         | See [Bash Return Codes]
+crit  | 255     | Bash reserved                         | See [Bash Return Codes]
 
 Note for contributors: if you engage on hacking **SPKI** I strongly suggest you to avoid using [Bash Return Codes] for **SPKI** functions (so avoiding 1-2, 126-165 and 255 - Of course, use them to trap Bash related errors).
 
