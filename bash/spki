@@ -83,7 +83,7 @@ InitializeCA() {
 LogToSyslog "alert" "Initialization of a Certificate Authority triggered"
 if [ -f $dir/private/ca.key ] || [ -f $dir/certs/ca.pem ]; then
   LogToSyslog "alert" "A existing Certificate Environment is detected while asking to Initialize a new one"
-  echo "ALERT: all previous existing certificates will be erased!" ;
+  PrintMessage "alert" "ALERT: all previous existing certificates will be erased!" ;
   echo -e -n "Are your sure you want to continue (y/n)? " ;
   read i ;
   [ "$i" = "y" ] || DieLogging 10 "InializeCA was canceled by user";
