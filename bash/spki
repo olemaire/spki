@@ -663,18 +663,20 @@ CheckEnv # Start making sure the PKI environment is OK
 local crlissuer=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
 local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
 local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep \"Serial Number:\" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+#./spki print crl|grep "Serial Number:"
 
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
 echo "Certificate Authority that issued:          ${crlissuer//issuer=/}"
-echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
-echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
-######## qui la signee
-######### auand elle a ete issue
-######### auand elle devra au max etre re issuee
-# combien de jour resrant
-# combien de certificates revokés existent
+echo "CRL produced on:                            ${lastcrldate//lastUpdate=/}"
+echo "CRL serial number:                          FIXME"
+echo "Number of Revoked Certificates:             ${revokedcertnb//[[:space:]]/}"
+echo "Next CRL to be produced on at maximum:      ${nextcrldate//nextUpdate=/}"
+echo "Current Status:                             FIXME"
+# Quel est son statut si plus valide ? FIXME: test en cours
 #TODO: where is the distribution point - to be done when coded (see #5 and #10)
+
 PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
 
 }
@@ -685,19 +687,33 @@ local subject=$1
 
 CheckEnv # Start making sure the PKI environment is OK
 
+CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $subject does not exists!"
+
+local certissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -issuer -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Issuer from $subject certificate"
+local certsubject=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -subject -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Subject from $subject certificate"
+local certserial=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -serial) || DieLogging 66 "InfoOnCert: cannot stat Serial from $subject certificate"
+local certemail=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -email) || DieLogging 66 "InfoOnCert: cannot stat Email from $subject certificate"
+local certalias="FIXME"
+local certpurpose="FIXME"
+local certstartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
+local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
+local certcurrentstatus="FIXME"
+
 echo "Certificate usefull informations:"
 echo "---------------------------------"
-#echo "Certificate issued by:                      ${caissuer//issuer=\ \//}"
-#echo "Start Validity on:                          ${castartdate//notBefore=/}"
-#echo "End Validity on:                            ${caenddate//notAfter=/}"
-#echo "Current Status:                             OK"
-#-serial
-#-subject
-#-issuer
-#-email
-#-alias ?
-# si il est pas revoke ou expire (son statut de validité)
-# son type *user,server...
+echo "Certificate issed for subject:                $subject"
+echo "Certificate issued by:                        ${certissuer//issuer=\ /}"
+echo "Certificate issued to:                        ${certsubject//subject=\ /}"
+echo "Certificate serial number:                    ${certserial//serial=/}"
+echo "Attached to email:                            $certemail"
+echo "Certificate Alias:                            $certalias"
+echo "Valid from:                                   ${certstartdate//notBefore=/}"
+echo "        to:                                   ${certenddate//notAfter=/}"
+echo "Current Status:                               $certcurrentstatus"
+local purpose=""
+
+# purpose?
+# its type user,server...? (grep on associated csr or conf for (type)_req ?
 
 PrintMessage "debug" "InfoOnCert ($subject): Not Implemented Yet"
 }
@@ -706,7 +722,7 @@ InfoOnCA() {
 # Will print human readable info regarding the CA
 local myhost=$HOSTNAME
 local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
-local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
+local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
 local castartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -startdate) || DieLogging 66 "PrintCAInfo: cannot stat CA startdate from CA certificate"
 local caenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -enddate) || DieLogging 66 "PrintCAInfo: cannot stat CA enddate from CA certificate"
 local validcert=$(grep "^V" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Valid certificates in CA index file"
@@ -718,7 +734,7 @@ echo "General info on the Certificate Authority:"
 echo "------------------------------------------"
 echo "Host running SPKI:                          $myhost"
 echo "Cryptographic Engine:                       $opensslversion"
-echo "Certificate Authority DN:                   ${caissuer//issuer=\ \//}"
+echo "Certificate Authority DN:                   ${caissuer//issuer=\ /}"
 echo "Start Validity on:                          ${castartdate//notBefore=/}"
 echo "End Validity on:                            ${caenddate//notAfter=/}"
 echo "Issued certificates Valid/Revoked/Expired:  ${validcert//[[:space:]]/} / ${revokedcert//[[:space:]]/} / ${expiredcert//[[:space:]]/}"
