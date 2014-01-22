@@ -507,6 +507,47 @@ LogToSyslog "info" "A new CRL has been generated and CRL directory rehashed"
 
 }
 
+RenewCert() {
+# Will renew the certificate for subject $1 with reason $2 (must exists - see CheckIfExists)
+
+# to allow --renew (server,user) subject (reason) and --renew subject (resaon)
+case "$1" in
+  server|user)
+    local subject=$2
+    local reason=$3
+    ;;
+  *)
+    local subject=$1
+    local reason=$2
+esac
+
+# This Check ash to be kept - unless we want to revoke the CA !
+case "$subject" in
+  ca|crl)
+    DieLogging 15 "RenewCert: Illegal Operation for a protected subject ($subject)"
+    ;;
+  *)
+    LogToSyslog "debug" "User asked to Renew a certificate for subject $subject with type $certtype"
+esac
+
+CheckIfExist $subject || DieLogging 13 "RenewCert: certificate for subject $subject does not exists!"
+
+PrintMessage "info" "RenewCert of $subject for reason $reason - Not Implemented Yet"
+
+#FIXMESTOPPEDHERE
+
+# - check we have got its CSR
+# - identify the type of certificate (server,user)
+#3- revoke with reason superseded as default (and not superseded if wrongly specified)
+#4- verify this revoked cert is not anymore valid
+#5- archive the former certificate
+#6- resign CSR and publish certificate according to its type - replacing the cert new > old
+#7- verify new cert - should be valid
+#9- inform user
+#
+}
+
+
 RevokeCert() {
 # Will revoke the certificate for subject $1 (must exists - see CheckIfExists)
 
@@ -527,7 +568,7 @@ case "$subject" in
     DieLogging 15 "RevokeCert: Illegal Operation for a protected subject ($subject)"
     ;;
   *)
-    LogToSyslog "debug" "User asked to Generate a certificate for subject $subject with type $certtype"
+    LogToSyslog "debug" "User asked to Revoke a certificate for subject $subject with type $certtype"
 esac
 
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
@@ -824,7 +865,7 @@ case "$1" in
     ;;
   -renew|--renew|renew)
     CheckEnv
-    echo "renew $2 (reason $3) - Not Implemented yet"
+    RenewCert $2 $3 $4
     ;;
   -revoke|--revoke|revoke)
     CheckEnv
