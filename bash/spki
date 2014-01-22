@@ -63,6 +63,8 @@ if [[ $result =~ $regexexpired ]]; then
   LogToSyslog "alert" "CheckEnv detected an Expired CRL"
   LogToSyslog "alert" "CheckEnv regenerating a new CRL" 
   /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
+  /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
+  LogToSyslog "debug" "A new CRL has been generated and CRL directory rehashed"
   LogToSyslog "alert" "CheckEnv has regenerated a new CRL" 
 else
   LogToSyslog "debug" "CheckEnv: CRL Expiry verification is OK"
