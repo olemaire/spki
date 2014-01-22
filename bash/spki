@@ -701,11 +701,15 @@ local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
 echo "Certificate Authority that issued:          ${crlissuer//issuer=/}"
-echo "CRL serial number:                          ${crlnumbernb//[[:space:]]/}"
-echo "CRL produced on:                            ${lastcrldate//lastUpdate=/}"
-echo "CRL next update on (at max):                ${nextcrldate//nextUpdate=/}"
+echo "Current CRL:"
+echo " - CRL serial number:                       ${crlnumbernb//[[:space:]]/}"
+echo " - CRL produced on:                         ${lastcrldate//lastUpdate=/}"
+echo " - CRL next update on (at max):             ${nextcrldate//nextUpdate=/}"
+echo ""
 echo "Number of Revoked Certificates:             ${revokedcertnb//[[:space:]]/}"
+echo ""
 echo "Current Status:                             OK" # Sure as CheckEnv will deal the case if the CRL was expired - see #18
+echo ""
 #TODO: where is the distribution point - to be done when coded (see #5 and #10)
 
 
@@ -724,7 +728,7 @@ local certsubject=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -su
 local certserial=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -serial) || DieLogging 66 "InfoOnCert: cannot stat Serial from $subject certificate"
 local certemail=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -email) || DieLogging 66 "InfoOnCert: cannot stat Email from $subject certificate"
 local certalias=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -alias) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
-local certpurpose="FIXME"
+local certpurpose=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -purpose) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
 local certstartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
 local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
 if VerifyCert $subject ; then
@@ -744,8 +748,9 @@ echo "Certificate Alias:                            $certalias"
 echo "Valid from:                                   ${certstartdate//notBefore=/}"
 echo "        to:                                   ${certenddate//notAfter=/}"
 echo "Current Status:                               $certcurrentstatus"
-local purpose=""
+echo "$certpurpose"
 
+# FIXMESTOPPEDHERE
 # purpose?
 # its type user,server...? (grep on associated csr or conf for (type)_req ?
 
@@ -771,13 +776,19 @@ echo "General info on the Certificate Authority:"
 echo "------------------------------------------"
 echo "Host running SPKI:                          $myhost"
 echo "Cryptographic Engine:                       $opensslversion"
-echo "Certificate Authority DN:                   ${caissuer//issuer=\ /}"
-echo "Start Validity on:                          ${castartdate//notBefore=/}"
-echo "End Validity on:                            ${caenddate//notAfter=/}"
-echo "Issued certificates Valid/Revoked/Expired:  ${validcert//[[:space:]]/} / ${revokedcert//[[:space:]]/} / ${expiredcert//[[:space:]]/}"
-echo "Last CRL produced on:                       ${lastcrldate//lastUpdate=/}"
-echo "Next CRL to be produced on:                 ${nextcrldate//nextUpdate=/}"
+echo " - CA Distinguished Name:                   ${caissuer//issuer=\ /}"
+echo " - Start Validity on:                       ${castartdate//notBefore=/}"
+echo " - End Validity on:                         ${caenddate//notAfter=/}"
+echo "Issued certificates:"
+echo " - Valid:                                   ${validcert//[[:space:]]/}"
+echo " - Revoked:                                 ${revokedcert//[[:space:]]/}"
+echo " - Expired:                                 ${expiredcert//[[:space:]]/}"
+echo "CRL infos:"
+echo " - Last CRL produced on:                    ${lastcrldate//lastUpdate=/}"
+echo " - Next CRL to be produced on:              ${nextcrldate//nextUpdate=/}"
+echo ""
 echo "Current Status:                             OK"
+echo ""
 }
 
 PrintCertInfo() {
