@@ -694,18 +694,18 @@ CheckEnv # Start making sure the PKI environment is OK
 local crlissuer=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
 local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
 local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
-local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep \"Serial Number:\" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+local crlnumber=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -crlnumber) || DieLogging 66 "PrintCAInfo> cannot stat on CRL number"
+local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep "Serial Number:" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 #./spki print crl|grep "Serial Number:"
 
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
 echo "Certificate Authority that issued:          ${crlissuer//issuer=/}"
+echo "CRL serial number:                          ${crlnumber//[[:space:]]/}" # FIXME : remove the "crlNumber=" 
 echo "CRL produced on:                            ${lastcrldate//lastUpdate=/}"
-echo "CRL serial number:                          FIXME"
+echo "CRL next update on:                         ${nextcrldate//nextUpdate=/}"
 echo "Number of Revoked Certificates:             ${revokedcertnb//[[:space:]]/}"
-echo "Next CRL to be produced on at maximum:      ${nextcrldate//nextUpdate=/}"
-echo "Current Status:                             FIXME"
-# Quel est son statut si plus valide ? FIXME: test en cours
+echo "Current Status:                             OK" # Sure as CheckEnv will deal the case if the CRL was expired - see #18
 #TODO: where is the distribution point - to be done when coded (see #5 and #10)
 
 PrintMessage "debug" "InfoOnCRL: Not Implemented Yet"
