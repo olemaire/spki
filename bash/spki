@@ -1,5 +1,5 @@
 #!/bin/bash
-#   SPKI -  Simple Public Key Infrastructur
+#   SPKI -  Simple Public Key Infrastructure
 #   Copyright © 2013 Senso-Rezo
 #   All rights reserved.
 #   See LICENSE file for licensing information.
@@ -356,6 +356,7 @@ local subject=$2
 LogToSyslog "debug" "Generating OpenSSL $conftype config file for subject $subject..."
 case "$conftype" in
   server)
+    local certreq="spki_type_server"
     local commonname="Common Name (ex:ldap.$DOMAIN)"
     local emailaddress="Server Administrator email address"
     local emailaddressdefault="$supportmail@$DOMAIN"
@@ -363,6 +364,7 @@ case "$conftype" in
     local nscerttype="server"
     ;;
   user)
+    local certreq="spki_type_user"
     local commonname="Common Name (ex: john.doe@$DOMAIN)"
     local emailaddress="User email address"
     local emailaddressdefault="$subject"
@@ -377,7 +379,9 @@ local OPENSSL_CONFIG="$dir/csr/$subject.conf"
 
 case "$automated" in
   yes|on)
-    /bin/cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+    /bin/cat > $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create - req part"
+# SPKI auto-generated OpenSSL configuration file for Certificate Signing Request
+# CSR to ask a certificate of type $conftype for $subject
 [ req ]
 default_bits          = $BITS
 default_keyfile       = $dir/keys/$subject.key
@@ -385,7 +389,7 @@ default_md            = sha1
 utf8                  = yes
 prompt                = no                                    # do not prompt for DN validation - because full automated way
 distinguished_name    = req_distinguished_name
-x509_extension        = cert_req
+x509_extension        = $certreq
 string_mask           = utf8only
 
 [ req_distinguished_name ]
@@ -405,7 +409,7 @@ default_keyfile       = $dir/keys/$subject.key
 default_md            = sha1
 utf8                  = yes
 distinguished_name    = req_distinguished_name
-x509_extension        = cert_req
+x509_extension        = $certreq
 string_mask           = utf8only
 
 [ req_distinguished_name ]
@@ -431,13 +435,13 @@ EOT
 esac
 
 cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot create Configuration file for $subject"
-# OpenSSL configuration filed use to generate a certificate for $subject
-[ cert_req ]
+[ $certreq ]
 basicConstraints      = critical, CA:false
 subjectKeyIdentifier  = hash
 keyUsage              = digitalSignature, keyEncipherment
 extendedKeyUsage      = $extendedkeyusage
 nsCertType            = $nscerttype
+# - This Is The End
 EOT
 
 }
