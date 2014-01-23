@@ -13,7 +13,8 @@ DOMAIN="senso-rezo.org"          # Domain name that will appear by default: chan
 COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
 supportmail="sysadm"             # The Support Email address used for server certiciates
 BITS=2048                        # Random bits used
-SERVER_DAYS=7306                 # Server certificate will be issued (new, renewed) for this period (just over 20 years...)
+CACERT_DAYS=7306                 # Certificate Authority certificate will be valid for this period (just over 20 years...)
+SERVER_DAYS=3653                 # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
 USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due
 
@@ -260,7 +261,7 @@ EOT
 esac
 
 PrintMessage "info" "Self-signing the Certificate Authority Certificate..."
-  /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $SERVER_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
+  /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $CACERT_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
 
 PrintMessage "info" "Initializing user environment (directories and indexes)..."
   if [ ! -d $dir/datas/certs ]; then
