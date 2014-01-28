@@ -22,6 +22,7 @@ emerg | 67      | CA Certificate is NOT VALID           | ex: CA certificate exp
 none  | 100     | Certificate is Invalid                | ex: verifying an invalid certificate
 none  | 101     | Certificate is Revoked                | ex: verifying a revoked certificate
 none  | 102     | Certificate is Expired                | ex: verifying an expired certificate
+warn  | 103     | Certificate status is Unknown         | cannot determine certificate status
 crit  | 126-165 | Bash reserved                         | See [Bash Return Codes]
 crit  | 255     | Bash reserved                         | See [Bash Return Codes]
 

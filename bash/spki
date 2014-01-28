@@ -715,6 +715,44 @@ else
 fi
 }
 
+PrintVerifyInfo() {
+# @ill print verify info on $subject
+local subject=$1
+
+CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
+
+$(VerifyCert $subject) ; local verifycert=$?
+case "$verifycert" in
+  0)
+    local certcurrentstatus="OK"
+    echo "Certificate for $subject is: $certcurrentstatus"
+    return 0
+    ;;
+ 101)
+    local certcurrentstatus="REVOKED"
+    echo "Certificate for $subject is: $certcurrentstatus"
+    return 101
+    ;;
+ 102)
+    local certcurrentstatus="EXPIRED"
+    echo "Certificate for $subject is: $certcurrentstatus"
+    return 102
+    ;;
+ 100)
+    local certcurrentstatus="INVALID"
+    echo "Certificate for $subject is: $certcurrentstatus"
+    return 100
+    ;;
+   *)
+    local certcurrentstatus="UNKNOWN"
+    echo "Certificate for $subject is: $certcurrentstatus"
+    LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject"
+    return 103
+esac
+
+}
+
+
 InfoOnCRL() {
 # Will print human readable infos regarding CRL
 
@@ -1010,13 +1048,7 @@ case "$1" in
     IssueCert $2 $3
     ;;
   -verify|--verify|verify)
-    if VerifyCert $2 ; then
-      echo "Certificate for $2 is VALID"
-      exit 0
-    else
-      echo "Certificate for $2 is INVALID"
-      exit 100
-    fi
+    PrintVerifyInfo $2
     ;;
   -renew|--renew|renew)
     RenewCert $2 $3 $4
