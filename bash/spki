@@ -688,7 +688,7 @@ local regexexpired=".*:certificate expired" #FIXME: to be checked
 
 
 if [[ $result =~ $regexok ]]; then
-  LogToSyslog "debug" "VerifyCert check OK: $result"
+  LogToSyslog "debug" "VerifyCert check VALID: $result"
   return 0
 elif [[ $result =~ $regexrevoked ]]; then
   LogToSyslog "debug" "VerifyCert check REVOKED: $result"
@@ -724,7 +724,7 @@ CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
-    local certcurrentstatus="OK"
+    local certcurrentstatus="VALID"
     echo "Certificate for $subject is: $certcurrentstatus"
     return 0
     ;;
@@ -801,7 +801,7 @@ local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -en
 $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
-    local certcurrentstatus="OK"
+    local certcurrentstatus="VALID"
     ;;
  101)
     local certcurrentstatus="REVOKED"
