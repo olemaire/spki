@@ -20,6 +20,7 @@ CRL_DAYS=31                      # Days between each CRL is due (a new CRL *MUST
 
 # user/context automation mode - have to be changed depending on user context
 automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
+debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
 
 
 # SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
@@ -37,7 +38,11 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
-debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
+ESC_SEQ="\x1b["                          # Color codes, used for PrintMessage() and some informations:
+COL_RESET=$ESC_SEQ"39;49;00m"            # - RED for Errors/Alerts/Emergs - and INVALID certificates 
+COL_RED=$ESC_SEQ"31;01m"                 # - YELLOW for Warnings and Unknown (but still not error)
+COL_GREEN=$ESC_SEQ"32;01m"               # - GREEN if everything is OK, certificate is VALID
+COL_YELLOW=$ESC_SEQ"33;01m"              # 
 
 # SPKI known types of certificates and related extensions
 # Known SPKI types: 
@@ -725,27 +730,27 @@ $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
     local certcurrentstatus="VALID"
-    echo "Certificate for $subject is: $certcurrentstatus"
+    echo -e "Certificate for $subject is: $COL_GREEN$certcurrentstatus$COL_RESET"
     return 0
     ;;
  101)
     local certcurrentstatus="REVOKED"
-    echo "Certificate for $subject is: $certcurrentstatus"
+    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 101
     ;;
  102)
     local certcurrentstatus="EXPIRED"
-    echo "Certificate for $subject is: $certcurrentstatus"
+    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 102
     ;;
  100)
     local certcurrentstatus="UNKNOWN"
-    echo "Certificate for $subject is: $certcurrentstatus"
+    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 100
     ;;
    *)
     local certcurrentstatus="UNKNOWN"
-    echo "Certificate for $subject is: $certcurrentstatus"
+    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject"
     return 103
 esac
@@ -775,7 +780,7 @@ echo " - CRL next update on (at max):             ${nextcrldate//nextUpdate=/}"
 echo ""
 echo "Number of Revoked Certificates:             ${revokedcertnb//[[:space:]]/}"
 echo ""
-echo "Current Status:                             OK" # Sure as CheckEnv will deal the case if the CRL was expired - see #18
+echo -e "Current Status:                            $COL_GREEN OK$COL_RESET" # Sure as CheckEnv will deal the case if the CRL was expired - see #18
 echo ""
 #TODO: where is the distribution point - to be done when coded (see #5 and #10)
 
@@ -802,18 +807,23 @@ $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
     local certcurrentstatus="VALID"
+    local COL_TO_USE=$COL_GREEN
     ;;
  101)
     local certcurrentstatus="REVOKED"
+    local COL_TO_USE=$COL_RED
     ;;
  102)
    local certcurrentstatus="EXPIRED"
+    local COL_TO_USE=$COL_RED
     ;;
  100)
    local certcurrentstatus="UNKNOWN"
+    local COL_TO_USE=$COL_RED
     ;;
    *)
    local certcurrentstatus="UNDETERMINED"
+    local COL_TO_USE=$COL_YELLOW
    LogToSyslog "warn" "InfoOnCert: stated an UNDETERMINE status of certificate for $subject - anormal condition"
 esac
 
@@ -852,7 +862,7 @@ echo "Certificate Validity:"
 echo " - valid from:                                ${certstartdate//notBefore=/}"
 echo "           to:                                ${certenddate//notAfter=/}"
 echo ""
-echo "Current Status:                               $certcurrentstatus"
+echo -e "Current Status:                               $COL_TO_USE$certcurrentstatus$COL_RESET"
 echo ""
 
 }
@@ -889,7 +899,7 @@ echo "CRL infos:"
 echo " - Last CRL produced on:                    ${lastcrldate//lastUpdate=/}"
 echo " - Next CRL to be produced on:              ${nextcrldate//nextUpdate=/}"
 echo ""
-echo "Current Status:                             OK"
+echo -e "Current Status:                            $COL_GREEN OK$COL_RESET"
 echo ""
 }
 
@@ -981,20 +991,20 @@ case "$priority" in
     fi
     ;;
   warn|warning)
-    echo "##### $message"
+    echo -e "$COL_YELLOW##### $message$COL_RESET"
     LogToSyslog "$priority" "$message"
     ;;
   crit|alert)
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    echo "!!!!! $message"
+    echo -e "$COL_RED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!$COL_RESET"
+    echo -e "$COL_RED!!!!! $message$COL_RESET"
     LogToSyslog "$priority" "$message"
     ;;
   emerg)
-    echo "********************************************************************"
-    echo "********************************************************************"
-    echo "********************************************************************"
-    echo "*****"
-    echo "***** $message"
+    echo -e "$COL_RED********************************************************************$COL_RESET"
+    echo -e "$COL_RED********************************************************************$COL_RESET"
+    echo -e "$COL_RED********************************************************************$COL_RESET"
+    echo -e "$COL_RED*****$COL_RESET"
+    echo -e "$COL_RED***** $message$COL_RESET"
     LogToSyslog "$priority" "$message"
     ;;
   *)
