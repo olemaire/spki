@@ -1,7 +1,31 @@
 [Bash Return Codes]: http://tldp.org/LDP/abs/html/exitcodes.html
 [syslog Facility and Severity levels]: http://en.wikipedia.org/wiki/Syslog
 
-# SPKI return codes
+# Certificate Authority and CRL status
+The CA and the CRL can be given the following status:
+
+Status | Meaning | Return Code
+:----: | :------ | :------------
+OK     | Everything is okay, **SPKI** ready to serve | 0
+NOT OK | Something is wrong, **SPKI** is NOT operationnal | depends on the cause 
+
+Before any action excepted the basics (printing help message), **SPKI** will self check to be sure to be in operational condition. If not an Error Message with meaningful Return Code will be provided (see later on the dedicated paragraph on Return Codes)
+
+# Certificate validity status
+**spki** certificaets may be of the following status:
+
+Status  | Meaning | Associated Return code
+:-----: | :------ | :-----------------
+VALID   | Certificate is operational | 0
+EXPIRED | Certificate is not anymore valid because of expiration | 102
+REVOKED | Certificat has been revoked by the CA | 101
+UNKNOWN | Impossible to determine the certificate status. To be considered invalid as long as status not perfectly determined | 100
+
+A certificate status "UNKNOWN" means that the **SPKI** cannot determine the exact status of validity of the considered certificate : **It's an anormal condition** and the situation must be looked after by the staff. Meanwhile, the certificate is to be considered invalid for this unknown reason.
+
+Return codes as the one returned by the `spki --verify <subject of certificate>` command (see dedicated paragraph).
+
+# Return Codes
 
 **SPKI** return codes are meaningful:
 
@@ -33,7 +57,7 @@ Note that the Return Code 100 is somewhat unusual: if **SPKI** returns 100 while
 
 The same return codes will be used for the Bash and the Perl flavors of **SPKI**.
 
-# SPKI Logging (syslog) facility and severity levels
+# Logging (syslog) facility and severity levels
 
 **SPKI** will log its actions (and potentials errors) to syslog, using the regular [syslog Facility and Severity levels].
 
@@ -51,3 +75,4 @@ Severity Level | Meaning | Examples
 Note that syslog severity levels *err(or)*, *notice* are not used by **SPKI**, and *debug* is not logged unless debugmode is activated (disabled by default). Anyway, *debug* message are still seen by user form the CLI.
 
 The same return facility and severity levels will be used for the Bash and the Perl flavors of **SPKI**.
+
