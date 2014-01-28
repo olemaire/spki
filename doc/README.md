@@ -6,7 +6,7 @@ The CA and the CRL can be given the following status:
 
 Status | Meaning | Return Code
 :----: | :------ | :------------
-OK     | Everything is okay, **SPKI** ready to serve | 0
+OK     | Everything is okay, **SPKI** ready to serve, CRL is valid | 0
 NOT OK | Something is wrong, **SPKI** is NOT operationnal | depends on the cause 
 
 Before any action excepted the basics (printing help message), **SPKI** will self check to be sure to be in operational condition. If not an Error Message with meaningful Return Code will be provided (see later on the dedicated paragraph on Return Codes)
