@@ -1,6 +1,14 @@
 [Bash Return Codes]: http://tldp.org/LDP/abs/html/exitcodes.html
 [syslog Facility and Severity levels]: http://en.wikipedia.org/wiki/Syslog
 
+**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
+- [Certificate Authority and CRL status](#certificate-authority-and-crl-status)
+- [Certificate validity status](#certificate-validity-status)
+- [Return Codes](#return-codes)
+- [Logging (syslog) facility and severity levels](#logging-syslog-facility-and-severity-levels)
+
+
 # Certificate Authority and CRL status
 The CA and the CRL can be given the following status:
 
