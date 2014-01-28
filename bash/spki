@@ -39,6 +39,15 @@ loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
 debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
 
+# SPKI known types of certificates and related extensions
+# Known SPKI types: 
+# - server
+spki_type_server="spki_type_server_cert"
+spki_type_server_extensions="serverAuth,clientAuth,msSGC,nsSGC"
+# - user
+spki_type_user="spki_type_user_cert"
+spki_type_user_extensions="clientAuth,emailProtection"
+
 
 ## FUNCTIONS
 CheckEnv() {
@@ -173,7 +182,7 @@ default_crl_days        = $CRL_DAYS                                         # Ho
 default_md              = sha1                                              # MD to use
 preserve                = no                                                # Keep passed DN ordering
 name_opt                = multiline,-esc_msb,utf8                           # Display UTF-8 characters
-x509_extensions         = server_cert                                       # default x509v3 extensions used
+x509_extensions         = spki_type_server_cert                             # default x509v3 extensions used
 policy                  = policy_anything
 [ policy_match ]
 countryName             = match
@@ -190,10 +199,10 @@ organizationName        = optional
 organizationalUnitName  = optional
 commonName              = supplied
 emailAddress            = optional
-[ server_cert ]
+[ spki_type_server_cert ]
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid:always
-extendedKeyUsage                = serverAuth,clientAuth,msSGC,nsSGC
+extendedKeyUsage                = $spki_type_server_extensions
 basicConstraints                = critical,CA:false
 nsComment                       = "SPKI $COMPANY Server Certificate"
 [ v3_ca ]
@@ -209,11 +218,11 @@ nsCertType                      = objsign,email,server
 [ user_policy ]
 commonName                      = supplied
 emailAddress                    = supplied
-[ user_cert ]
+[ spki_type_user_cert ]
 subjectAltName                  = email:copy
 basicConstraints                = critical,CA:false
 authorityKeyIdentifier          = keyid:always
-extendedKeyUsage                = clientAuth,emailProtection
+extendedKeyUsage                = $spki_type_user_extensions
 nsComment                       = "SPKI $COMPANY User Certificate"
 EOT
 case "$automated" in
@@ -475,13 +484,13 @@ case "$certtype" in
     CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)" #FIXME should not be needed as called by IssueCert
     GenerateOpenSSLConf "server" "$subject" 
     local certdays=$SERVER_DAYS
-    local extensions="server_cert"
+    local extensions="spki_type_server_cert"
   ;;
   user)
     CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)" #FIXME shoud not be needed as called by IssueCert
     GenerateOpenSSLConf "user" "$subject" 
     local certdays=$USER_DAYS
-    local extensions="user_cert"
+    local extensions="spki_type_user_cert"
   ;;
   *)
     DieLogging 12 "GenerateCert asked for an Unknown type of certificate asked ($certtype)"
@@ -767,7 +776,25 @@ case "$verifycert" in
     ;;
    *)
    local certcurrentstatus="UNKNOWN"
-   #FIXME: does I need to DieLogging or only LogToSyslog -> this condition (*) should not arrive
+   LogToSyslog "warn" "InfoOnCert: stated an UNKNOWN status of certificate for $subject"
+esac
+
+local certtype=$(/usr/bin/grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
+certtype=${certtype//*[[:space:]]=\ /}
+certtype=${certtype#spki_type_}
+case "$certtype" in
+  user)
+    local certtypestring="USER certificate"
+    local certcapacities=$spki_type_user_extensions
+    ;;
+  server)
+    local certtypestring="SERVER certificate"
+    local certcapacities=$spki_type_server_extensions
+    ;;
+  *)
+    local certtypestring="UNKNOWN certificate"
+    local certcapacities="UNKNOWN"
+    LogToSyslog "warn" "InfoOnCert found an UNKNOWN type of certificate for certificate $subject"
 esac
 
 echo "Certificate usefull informations:"
@@ -778,8 +805,8 @@ echo " - for subject DN:                            ${certsubject//subject=\ /}"
 echo " - Certificate serial number:                 $((0x${certserial//serial=/}))"
 echo "                    (in hex):                 ${certserial//serial=/}"
 echo ""
-echo "Certificate Type:                             FIXME"
-echo " - Capacities:                                FIXME"
+echo "Certificate Type:                             $certtypestring" 
+echo " - Capacities:                                $certcapacities"
 echo " - Attached to email:                         $certemail"
 echo " - Alias:                                     $certalias"
 echo ""
@@ -790,12 +817,6 @@ echo ""
 echo "Current Status:                               $certcurrentstatus"
 echo ""
 
-# FIXMESTOPPEDHERE
-# purpose?
-# type (spki type)?
-# its type user,server...? (grep on associated csr or conf for (type)_req ?
-
-PrintMessage "debug" "InfoOnCert ($subject): Not Implemented Yet"
 }
 
 InfoOnCA() {
@@ -982,7 +1003,7 @@ Exemples:
 CheckConfig
 
 case "$1" in
-  -init|--init|init)
+  -initialize|--initialize|initialize)
     InitializeCA
     ;;
   -issue|--issue|issue)
