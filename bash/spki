@@ -779,7 +779,7 @@ case "$verifycert" in
    LogToSyslog "warn" "InfoOnCert: stated an UNKNOWN status of certificate for $subject"
 esac
 
-local certtype=$(/usr/bin/grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
+local certtype=$(grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
 certtype=${certtype//*[[:space:]]=\ /}
 certtype=${certtype#spki_type_}
 case "$certtype" in
