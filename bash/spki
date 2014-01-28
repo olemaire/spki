@@ -16,7 +16,7 @@ BITS=2048                        # Random bits used
 CACERT_DAYS=7306                 # Certificate Authority certificate will be valid for this period (just over 20 years...)
 SERVER_DAYS=3653                 # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
 USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
-CRL_DAYS=31                      # Days between each CRL is due
+CRL_DAYS=31                      # Days between each CRL is due (a new CRL *MUST* be regenerated before this delay)
 
 # user/context automation mode - have to be changed depending on user context
 automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
@@ -80,6 +80,11 @@ else
   echo "***** ADMNINISTRATIVE ACTION REQUIRED"
   DieLogging 67 "The Certificate Authority is not operational"
 fi
+
+# Making sure the OpenSSL Index database is update with expired certificates - see #19
+LogToSyslog "debug" "CheckEnv: Openssl updating its index database"
+/usr/bin/openssl ca -config $CONFIG_CA -updatedb > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot force OpenSSL to update its index database (pruning)"
+
 }
 
 CheckConfig() {
@@ -668,19 +673,23 @@ CheckEnv # Start making sure the PKI environment is OK.
 CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
 local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
-local regex=".*$subject.pem: OK\$"
+local regexok=".*$subject.pem: OK\$"
+local regexrevoked=".*:certificate revoked\$"
+local regexexpired=".*:certificate expired" #FIXME: to be checked
 
-# if CRL expried-> CRL has expired - see #18
-#       With OpenSSL 1.0.1y (and counting), the verify --CRLfile file.pem could do (undocumented but working option) in association with --CAfile ca.pem
-#       That should avoid to use c_rehash at each CRL generation
-#       But most of the 2011-2014 systems are still shipped with OpenSSL 0.9.8y ... so, need to find a generic way
 
-if [[ $result =~ $regex ]]; then
+if [[ $result =~ $regexok ]]; then
   LogToSyslog "debug" "VerifyCert check OK: $result"
   return 0
-else 
+elif [[ $result =~ $regexrevoked ]]; then
+  LogToSyslog "debug" "VerifyCert check REVOKED: $result"
+  return 101
+elif [[ $result =~ $regexexpired ]]; then
+  LogToSyslog "debug" "VerifyCert check EXPIRED: $result"
+  return 102
+else
   LogToSyslog "debug" "VerifyCert check INVALID: $result"
-  return 1
+  return 100
 fi
 }
 
@@ -742,27 +751,48 @@ local certalias=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -alia
 local certpurpose=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -purpose) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
 local certstartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
 local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
-if VerifyCert $subject ; then
-  local certcurrentstatus="VALID"
-else
-  local certcurrentstatus="INVALID"
-fi
+$(VerifyCert $subject) ; local verifycert=$?
+case "$verifycert" in
+  0)
+    local certcurrentstatus="OK"
+    ;;
+ 101)
+    local certcurrentstatus="REVOKED"
+    ;;
+ 102)
+   local certcurrentstatus="EXPIRED"
+    ;;
+ 100)
+   local certcurrentstatus="INVALID"
+    ;;
+   *)
+   local certcurrentstatus="UNKNOWN"
+   #FIXME: does I need to DieLogging or only LogToSyslog -> this condition (*) should not arrive
+esac
 
 echo "Certificate usefull informations:"
 echo "---------------------------------"
 echo "Certificate issed for subject:                $subject"
-echo "Certificate issued by:                        ${certissuer//issuer=\ /}"
-echo "Certificate issued to:                        ${certsubject//subject=\ /}"
-echo "Certificate serial number:                    ${certserial//serial=/}"
-echo "Attached to email:                            $certemail"
-echo "Certificate Alias:                            $certalias"
-echo "Valid from:                                   ${certstartdate//notBefore=/}"
-echo "        to:                                   ${certenddate//notAfter=/}"
+echo " - Delivered by:                              ${certissuer//issuer=\ /}"
+echo " - for subject DN:                            ${certsubject//subject=\ /}"
+echo " - Certificate serial number:                 $((0x${certserial//serial=/}))"
+echo "                    (in hex):                 ${certserial//serial=/}"
+echo ""
+echo "Certificate Type:                             FIXME"
+echo " - Capacities:                                FIXME"
+echo " - Attached to email:                         $certemail"
+echo " - Alias:                                     $certalias"
+echo ""
+echo "Certificate Validity:"
+echo " - valid from:                                ${certstartdate//notBefore=/}"
+echo "           to:                                ${certenddate//notAfter=/}"
+echo ""
 echo "Current Status:                               $certcurrentstatus"
-echo "$certpurpose"
+echo ""
 
 # FIXMESTOPPEDHERE
 # purpose?
+# type (spki type)?
 # its type user,server...? (grep on associated csr or conf for (type)_req ?
 
 PrintMessage "debug" "InfoOnCert ($subject): Not Implemented Yet"
@@ -790,10 +820,12 @@ echo "Cryptographic Engine:                       $opensslversion"
 echo " - CA Distinguished Name:                   ${caissuer//issuer=\ /}"
 echo " - Start Validity on:                       ${castartdate//notBefore=/}"
 echo " - End Validity on:                         ${caenddate//notAfter=/}"
+echo ""
 echo "Issued certificates:"
 echo " - Valid:                                   ${validcert//[[:space:]]/}"
 echo " - Revoked:                                 ${revokedcert//[[:space:]]/}"
 echo " - Expired:                                 ${expiredcert//[[:space:]]/}"
+echo ""
 echo "CRL infos:"
 echo " - Last CRL produced on:                    ${lastcrldate//lastUpdate=/}"
 echo " - Next CRL to be produced on:              ${nextcrldate//nextUpdate=/}"

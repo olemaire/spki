@@ -20,6 +20,8 @@ alert | 15      | CRL has Expired                       | Will immediately gener
 emerg | 66      | OpenSSL error                         | ex: OpenSSL misused or cannot perform
 emerg | 67      | CA Certificate is NOT VALID           | ex: CA certificate expired or file corrupted
 none  | 100     | Certificate is Invalid                | ex: verifying an invalid certificate
+none  | 101     | Certificate is Revoked                | ex: verifying a revoked certificate
+none  | 102     | Certificate is Expired                | ex: verifying an expired certificate
 crit  | 126-165 | Bash reserved                         | See [Bash Return Codes]
 crit  | 255     | Bash reserved                         | See [Bash Return Codes]
 
