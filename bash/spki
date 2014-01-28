@@ -531,7 +531,7 @@ LogToSyslog "debug" "Asking the CA to sign the certificate for $subject..."
 LogToSyslog "debug" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
 LogToSyslog "debug" "Verifying certificate for $subject..."
-  VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (INVALID) for subject $subject"
+  VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
 PrintMessage "info" "Certificate ($certtype) generated for $subject:"
 PrintMessage "info" " - CA certificate: $dir/certs/ca.pem"
 PrintMessage "info" " - Subject certificate: $dir/certs/$subject.pem"
@@ -697,7 +697,7 @@ elif [[ $result =~ $regexexpired ]]; then
   LogToSyslog "debug" "VerifyCert check EXPIRED: $result"
   return 102
 else
-  LogToSyslog "debug" "VerifyCert check INVALID: $result"
+  LogToSyslog "warn" "VerifyCert check UNKNOWN: $result" # warn log leel as we should know (being more precise)
   return 100
 fi
 }
@@ -739,7 +739,7 @@ case "$verifycert" in
     return 102
     ;;
  100)
-    local certcurrentstatus="INVALID"
+    local certcurrentstatus="UNKNOWN"
     echo "Certificate for $subject is: $certcurrentstatus"
     return 100
     ;;
@@ -810,11 +810,11 @@ case "$verifycert" in
    local certcurrentstatus="EXPIRED"
     ;;
  100)
-   local certcurrentstatus="INVALID"
+   local certcurrentstatus="UNKNOWN"
     ;;
    *)
-   local certcurrentstatus="UNKNOWN"
-   LogToSyslog "warn" "InfoOnCert: stated an UNKNOWN status of certificate for $subject"
+   local certcurrentstatus="UNDETERMINED"
+   LogToSyslog "warn" "InfoOnCert: stated an UNDETERMINE status of certificate for $subject - anormal condition"
 esac
 
 local certtype=$(grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
