@@ -29,7 +29,7 @@ It's up to you to select the flavor that fits you best: both are released under 
 	- [The Manual Way](#the-manual-way)
 - [Credits](#credits)
 
-
+**WARNING: the following documentation is not in sync with master - so read it for now as source of inspiration instead of copy/paste reminder...** (and yes, it will be fixed soon -> see ticket 11).
 
 # Installation & Configuration
 See related flavor ([Bash] and [Perl]) Installation pages: browse the associated directory and have a look at their README file.
