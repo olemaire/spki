@@ -7,6 +7,7 @@
 
 # spki - spki core util (command line)
 
+# Default values - will be overridable by configuration file
 # user/context variables - have to be changed depending on user/context
 COUNTRY="US"                     # Country Code you want to registrer the PKI to (must be 2 letter country code)
 DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
@@ -23,6 +24,7 @@ automated="yes"                          # Define if SPKI must be full automated
 debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
 
 
+# Non overridable values - cannot be changed by user's configuration file
 # SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
 dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
                                          # where the following sub-directories are used:
@@ -35,6 +37,7 @@ dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
                                          #   serial_crl(.old): next CRL serial to be used (and last action backup)
                                          #   certs/: directory containing all certificates delivered so far
                                          #   random_bits: pseudo-Random bytes used for OpenSSL entropy
+SPKI_CONFIG="$dir/spki.conf"             # SPKI configuration file - if you want to override default builtin values
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
 loggerchan="daemon"                      # Facitily used for messages within syslog
@@ -103,6 +106,13 @@ LogToSyslog "debug" "CheckEnv: Openssl updating its index database"
 
 CheckConfig() {
 # Check if config is consistent - done at each startup anyway
+if [ -f $SPKI_CONFIG ]; then
+  LogToSyslog "debug" "CheckConfig: configuration file found, will so parse it and override builtin values..."
+  ParseConfigFile
+else
+  LogToSyslog "debug" "CheckConfig: no configuration file found, using default builtin values"
+fi
+
 case "$automated" in
   yes|on|no|not|off)
     LogToSyslog "debug" "CheckConfig: automated mode asked is supported ($automated)"
@@ -117,7 +127,84 @@ case "$debugmode" in
   *)
     DieLogging 9 "CheckConfig: debugmode not supported ($debugmode)!!!" 
 esac
+
+if [ "$BITS" -lt 1024 ]; then
+  DieLogging 9 "CheckConfig: Random Bits (BITS) must be greater than 1024!!!"
+elif [ "$BITS" -gt 4096 ]; then
+  DieLogging 9 "CheckConfig: Random Bits (BITS) must be not exceed 4096!!!"
+else
+  LogToSyslog "debug" "CheckConfig: BITS have legal value of $BITS"
+fi
+
 }
+
+ParseConfigFile() {
+# Will parse local configuration file and export values if in accepted list - else log warn
+LogToSyslog "debug" "ParseConfigFile: parsing local configuration file $SPKI_CONFIG..."
+shopt -s extglob
+while IFS='= ' read lhs rhs
+do
+  if [[ ! $lhs =~ ^\ *# && -n $lhs ]]; then
+    rhs="${rhs%%\#*}"    # Del in line right comments
+    rhs="${rhs%%*( )}"   # Del trailing spaces
+    rhs="${rhs%\"*}"     # Del opening string quotes 
+    rhs="${rhs#\"*}"     # Del closing string quotes 
+    case "$lhs" in
+      COUNTRY)
+        COUNTRY="$rhs"
+        ## Should have a check on lenght (2 chars max)
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      DOMAIN)
+        DOMAIN="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      COMPANY)
+        COMPANY="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      supportmail)
+        supportmail="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      BITS)
+        BITS="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      CACERT_DAYS)
+        CACERT_DAYS="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      SERVER_DAYS)
+        SERVER_DAYS="$rhs"
+        ## Should be -lt CACERT_DAYS
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      USER_DAYS)
+        USER_DAYS="$rhs"
+        ## Should be -lt CACERT_DAYS
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      CRL_DAYS)
+        CRL_DAYS="$rhs"
+        ## Should be -lt CACERT_DAYS - and all other SERVER/USER_DAYS too
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      automated)
+        automated="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      debugmode)
+        debugmode="$rhs"
+        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      *)
+        LogToSyslog "warn" "ParseConfigFile: not supported value ($lhs) - typo error? - ignoring"
+    esac
+  fi
+done < $SPKI_CONFIG
+}
+
 
 CheckIfExist() {
 # Check it the subject already exists - return 0 if exists, 1 if not
@@ -312,7 +399,7 @@ IssueCert() {
 local certtype=$1
 local subject=$2
 
-CheckEnv # Start making sure the PKI environment is ok
+CheckEnv # Start making sure the PKI environment is OK
 
 CheckCertType $certtype || DieLogging 12 "IssueCert cannot issue a certificate of an unsupported type ($certtype)"
 
@@ -682,7 +769,7 @@ VerifyCert() {
 # Will verify certificate for subjet $1 (must exists - see CheckIfExist)
 local subject=$1
 
-CheckEnv # Start making sure the PKI environment is OK.
+CheckEnv # Start making sure the PKI environment is OK
 
 CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
