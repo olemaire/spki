@@ -10,9 +10,11 @@
 * **Stupid** : well... in fact will deliver X.509 Digital Certificates (and associated keys and CRL) but not built the way IETF PKIX nor SPKI RFCs indicate to follow. Loosely coded: just works, but not bullet proof at all (use at your own risks and perils...).
 * **Key Infrastructure**: Certificates are X.509 PKIX compliant (or at least seems to be). I personnally use these certificates for a *Private* purpose, as most users does with PKIs... But you can use it for *Public* purpose (certificates for your web sites, to encrypt/decrypt mails within your colleagues, ...). 
 
-**SPKI** comes in two flavors: made in [Bash] or [Perl], both using [OpenSSL] as cryptographic engine.
+**SPKI** comes in multiple flavors: made in [Bash] or [Perl], both using [OpenSSL] as cryptographic engine.
 
 It's up to you to select the flavor that fits you best: both are released under BSD revised license.
+
+*nota: for now only the Bash flavor is ok - other flavor still work-in-progress*
 
 **Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
 
@@ -32,9 +34,9 @@ It's up to you to select the flavor that fits you best: both are released under 
 **WARNING: the following documentation is not in sync with master - so read it for now as source of inspiration instead of copy/paste reminder...** (and yes, it will be fixed soon -> see ticket 11).
 
 # Installation & Configuration
-See related flavor ([Bash] and [Perl]) Installation pages: browse the associated directory and have a look at their README file.
+See related flavor Installation pages: browse the associated directory and have a look at their README.md file.
 
-**SPKI** is designed to ease operations and you will need to configure the default options/fields you want to use in operation mode: this won't take longer than editing a file anyway, and will have to be done only once at initialisation time.
+**SPKI** is designed to ease operations and you will need to configure the default options/fields you want to use in operation mode: this won't take longer than creating and editing a file anyway, and will have to be done only once at initialisation time.
 
 During this installation and initialisation phase, you will have to decide for the mode you want to run **SPKI**:
 
@@ -52,16 +54,18 @@ No matter the mode you are running on, the same CLI is provided, and pretty self
     Usage: spki <option> (<subject>) 
     
     Available options are:
-    --init                           Initialize a new Certiciate Authority.
-    --server <fqdn>                  Generate a Server certificate.
-    --user <email>                   Generate an User certificate.
-    --verify <email,fqdn>            Verify a given certificate.
-    --renew <email,fqdn>             Renew a given certificate.
-    --revoke <email,fqdn> (reason)   Revoke a given certificate.
-    --crl                            Generate a Certificate Revocation List.
-    --info <email,fqdn,ca,crl>       Will display human readable infos on certificate/CRL
-    --status                         Will give information on the SPKI status.
-    --help                           Display this short help message.
+        --initialize                     Initialize a new Certiciate Authority
+        --issue <type> <subject>         Issue a certificate of <type> for <subject>
+                server <fqdn>              issue a Server certificate
+                user <email>               issue an User certificate
+        --verify <email,fqdn>            Verify a given certificate
+        --renew <email,fqdn> (reason)    Renew a given certificate
+        --revoke <email,fqdn> (reason)   Revoke a given certificate
+        --crl                            Generate a Certificate Revocation List
+        --print <email,fqdn,ca,crl>      Will display a raw print of certificate/CRL
+        --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
+        --status                         Will give an overall status of operatin of SPKI
+        --help                           Display this short help message
 
 For now, two types of certificates are delivered:
 
@@ -71,7 +75,7 @@ For now, two types of certificates are delivered:
     
     They can be used for the following x509 operations: TLS Web Server Authentication, TLS Web Client Authentication, Microsoft Server Gated Crypto, Netscape Server Gated Crypto.
     
-    Common usage: HTTPS servers, OpenSSL gateways, ...
+    Common usage: HTTPS servers, OpenVPN gateways, ...
     
 2. **user** certificates: for authentication and mail protection. 
 
@@ -84,6 +88,8 @@ For now, two types of certificates are delivered:
 # Howto use **SPKI**
 ## Automatic mode
 In Automated mode, the usage is pretty straight and forward, and assume you know what you want to and want it done at light speed, even from a external script (for **SPKI** integration in broader system). 
+
+FIXMESTOPPEDHERE
 
 ### First: Initialize your Certificate Authority
 
