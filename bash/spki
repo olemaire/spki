@@ -669,7 +669,7 @@ case "$1" in
     local reason=$2
 esac
 
-# This Check ash to be kept - unless we want to revoke the CA !
+# This Check as to be kept - unless we want to revoke the CA !
 case "$subject" in
   ca|crl)
     DieLogging 15 "RenewCert: Illegal Operation for a protected subject ($subject)"
@@ -680,7 +680,129 @@ esac
 
 CheckIfExist $subject || DieLogging 13 "RenewCert: certificate for subject $subject does not exists!"
 
-PrintMessage "info" "RenewCert of $subject for reason $reason - Not Implemented Yet"
+local certtype=$(grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
+certtype=${certtype//*[[:space:]]=\ /}
+certtype=${certtype#spki_type_}
+case "$certtype" in
+  user)
+    CheckSubject "email" "$subject" || DieLogging 12 "RenewCert cannot renew a $certtype certificate for invalid EMAIL ($subject)"
+    local certdays=$USER_DAYS
+    local extensions="spki_type_user_cert"
+    ;;
+  server)
+    CheckSubject "fqdn" "$subject" || DieLogging 12 "RenewCert cannot renew a $certtype certificate for invalid FQDN ($subject)"
+    local certdays=$SERVER_DAYS
+    local extensions="spki_type_server_cert"
+    ;;
+  *)
+    local certtypestring="UNKNOWN certificate"
+    local certcapacities="UNKNOWN"
+    DieLogging 12 "RenewCert asked to renew an Unknown type of certificate ($certtype) for $subject"
+esac
+
+case "$reason" in
+  unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
+    LogToSyslog "debug" "RenewCert: is called to renew certificate for subject $subjet with reason $reason"
+    local renewal_reason=$reason
+    ;;
+  "")
+    LogToSyslog "debug" "RevokeCert: is called to revoke certificate for subject $subject with no reason, so defaulting to superseded)"
+    local renewal_reason="superseded"
+    ;;
+  *)
+    LogToSyslog "warn" "RevokeCert: is called to revoke certificate for subject $subject with unknown reason ($reason), defaulting to superseded"
+    local renewal_reason="superseded"
+esac
+
+$(VerifyCert $subject) ; local verifycert=$?
+case "$verifycert" in
+  0)
+    # Certificat to renew is valid -> revoking it first
+    PrintMessage "info" "Renewing Certificate (type: $certtype) for $subject with reason $renewal_reason:"
+    PrintMessage "info" " - a VALID certificate already exits, so revoking it first (reason = $renewal_reason)"
+    case "$automated" in
+      yes|on)
+        LogToSyslog "debug" "-> automated mode is on..."
+        openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $renewal_reason > /dev/null 2>&1 || DieLogging 66 "RenewCert: unable to revoke certificate for subject $subject"
+        PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $renewal_reason."
+        GenerateCRL || DieLogging 126 "RenewCert cannot generate a CRL (automated mode is $automated)"
+        openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
+        PrintMessage "info" " - Generating a new certificate (type: $certtype) for $subject..."
+        ;;
+      no|not|off)
+        LogToSyslog "debug" "-> automated mode is off..."
+        openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $renewal_reason || DieLogging 66 "RenewCert: unable to revoke certificate for subject $subject"
+        PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $renewal_reason."
+        PrintMessage "info" " - You should think about generating a new CRL..."
+        openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
+        PrintMessage "info" " - Generating a new certificate (type: $certtype) for $subject..."
+        ;;
+      *)
+        DieLogging 12 "RenewCert called in an unsupported automated mode ($automated)" # Should not arrive as CheckConfig is already done
+    esac
+    LogToSyslog "debug" "Extracting certificate for subject $subject..."
+    /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "RenewCert cannot extract certificate for subject $subject"
+    LogToSyslog "debug" "Verifying certificate for $subject..."
+    VerifyCert $subject || DieLogging 126 "RenewCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
+    PrintMessage "info" " - A New Certificate ($certtype) generated for $subject at:"
+    PrintMessage "info" " - $dir/certs/$subject.pem"
+    PrintMessage "info" "Have a nice day."
+    return 0
+    ;;
+ 101)
+    # Certificate to renew has already been revoked -> renewing it directly
+    PrintMessage "info" "Renewing Certificate (type: $certtype) for $subject with reason $renewal_reason:"
+    PrintMessage "info" " - a certificate for $subject have already been revoked, so no reason to revoke now"
+    case "$automated" in
+      yes|on)
+        LogToSyslog "debug" "-> automated mode is on..."
+        openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
+        PrintMessage "info" " - Generating a new certificate (type: $certtype) for $subject..."
+        ;;
+      no|not|off)
+        LogToSyslog "debug" "-> automated mode is off..."
+        openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
+        PrintMessage "info" " - Generating a new certificate (type: $certtype) for $subject..."
+        ;;
+      *)
+        DieLogging 12 "RenewCert called in an unsupported automated mode ($automated)" # Should not arrive as CheckConfig is already done
+    esac
+    LogToSyslog "debug" "Extracting certificate for subject $subject..."
+    /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "RenewCert cannot extract certificate for subject $subject"
+    LogToSyslog "debug" "Verifying certificate for $subject..."
+    VerifyCert $subject || DieLogging 126 "RenewCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
+    PrintMessage "info" " - A New Certificate ($certtype) generated for $subject at:"
+    PrintMessage "info" " - $dir/certs/$subject.pem"
+    PrintMessage "info" "Have a nice day."
+    return 0
+    ;;
+ 102)
+    # Certificate to renew has already expired -> revoking reason (superseeded) -> renewing ?
+    PrintMessage "info" "SIMUL: Certs to renew has already expirted -> revoking (outOf or superseded...) and renewing?"
+    return 0
+    #local certcurrentstatus="EXPIRED"
+    #echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    #return 102
+    ;;
+ 100)
+    # That means I cannot stat the certificate status -> DieLogging (to be fixed by dev) 
+    PrintMessage "info" "SIMUL: Certs to renew in unkown status-> DieLogging !!!"
+    return 100
+    #local certcurrentstatus="UNKNOWN"
+    #echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    #return 100
+    ;;
+   *)
+    # That should not arrive -> DieLogging (to be fixed by dev) 
+    PrintMessage "info" "SIMUL: That should not arrive (internal error) -> DieLogging !!!"
+    return 103
+    #local certcurrentstatus="UNKNOWN"
+    #echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    #LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject"
+    #return 103
+esac
+
+PrintMessage "info" "RenewCert for $subject (type: $certtypestring) for reason $renewal_reason - Not Implemented Yet"
 
 #FIXMESTOPPEDHERE
 
