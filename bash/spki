@@ -71,7 +71,7 @@ fi
 # -> verifying the CA certificate again, with the assurance the CRL is ok now.
 # -> if CA certificate not VALID, then the CA IS NOT OPERATIONAL (cert expired or file corrupted -> to be investigated by admins)
 
-local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
+local result=$(openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
 local regexexpired=".*CRL has expired"
 local regexok=".*ca.pem: OK\$"
 
@@ -79,7 +79,7 @@ LogToSyslog "debug" "CheckEnv: CRL Expiry verification"
 if [[ $result =~ $regexexpired ]]; then
   LogToSyslog "alert" "CheckEnv detected an Expired CRL"
   LogToSyslog "alert" "CheckEnv regenerating a new CRL" 
-  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
+  openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
   /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
   LogToSyslog "debug" "A new CRL has been generated and CRL directory rehashed"
   LogToSyslog "alert" "CheckEnv has regenerated a new CRL" 
@@ -88,7 +88,7 @@ else
 fi
 
 LogToSyslog "debug" "CheckEnv: CRL Expiry verification"
-result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
+result=$(openssl verify -CApath $dir/crl/ -crl_check $dir/certs/ca.pem) || DieLogging 67 "CheckEnv cannot verify the CA certificate!!" 
 if [[ $result =~ $regexok ]]; then
   LogToSyslog "debug" "CheckEnv: CA Certificate validy verification is OK"
 else
@@ -99,7 +99,7 @@ fi
 
 # Making sure the OpenSSL Index database is update with expired certificates - see #19
 LogToSyslog "debug" "CheckEnv: Openssl updating its index database"
-/usr/bin/openssl ca -config $CONFIG_CA -updatedb > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot force OpenSSL to update its index database (pruning)"
+openssl ca -config $CONFIG_CA -updatedb > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot force OpenSSL to update its index database (pruning)"
 
 }
 
@@ -233,15 +233,15 @@ LogToSyslog "debug" "Generating the Certificate Authority signing environment...
     yes|on)
       PrintMessage "info" "Automated mode is ON..."
       PrintMessage "info" "Initializing Random Bits..."
-      /usr/bin/openssl rand $BITS > $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 126 "InitializeCA cannot create Random Bits"
+      openssl rand $BITS > $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 126 "InitializeCA cannot create Random Bits"
       PrintMessage "info" "Generating the Certificate Authority private Key..."
-      /usr/bin/openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+      openssl genrsa -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits > /dev/null 2>&1 || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
     no|not|off)
       PrintMessage "info" "Automated mode is OFF..."
-      /usr/bin/openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
+      openssl rand $BITS > $dir/datas/random_bits || DieLogging 126 "InitializeCA cannot create Random Bits"
       PrintMessage "info" "Generating the Certificate Authority private Key..."
-      /usr/bin/openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
+      openssl genrsa -des3 -out $dir/private/ca.key $BITS -rand $dir/datas/random_bits || DieLogging 66 "InitializeCA cannot generate Certificate Authority private Key"
       ;;
     *)
     DieLogging 12 "InitializeCA called in an unsupported automated mode ($automated)"
@@ -361,7 +361,7 @@ EOT
 esac
 
 PrintMessage "info" "Self-signing the Certificate Authority Certificate..."
-  /usr/bin/openssl req -new -x509 -config $CONFIG_CA -days $CACERT_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
+  openssl req -new -x509 -config $CONFIG_CA -days $CACERT_DAYS -key $dir/private/ca.key -out $dir/certs/ca.pem || DieLogging 66 "InitializeCA cannot Self-sign Certificate Authority Certificate"
 
 PrintMessage "info" "Initializing user environment (directories and indexes)..."
   if [ ! -d $dir/datas/certs ]; then
@@ -380,7 +380,7 @@ PrintMessage "info" "Initializing user environment (directories and indexes)..."
 LogToSyslog "debug" "Issuing the first Certificate Revocation List"
   /bin/cp $dir/certs/ca.pem $dir/crl/ca.pem || DieLogging 126 "InitializeCA cannot copy CA certificate to CRL directory"
   #GenerateCRL || DieLogging 126 "InitializeCA cannot generate the first CRL"
-  /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
+  openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "CheckEnv cannot generate a new CRL"
   /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
 
 PrintMessage "alert" "$COMPANY Root Certificate Authority is initialized."
@@ -585,31 +585,31 @@ LogToSyslog "debug" "Let's generate a $certtype certificate for user $subject"
 LogToSyslog "debug" "Generating keys for subject $subject..." 
   case "$automated" in
     yes|on)
-      /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS > /dev/null 2>&1 || DieLogging 66 "GenerateCert cannot generate key for $subject"
+      openssl genrsa -out $dir/keys/$subject.key $BITS > /dev/null 2>&1 || DieLogging 66 "GenerateCert cannot generate key for $subject"
       ;;
     no|not|off)
       echo -e -n " |----> Protect key with a passphrase (y/n)? : [n] "
       read keyboard
       if [ "$keyboard" == "y" -o "$keyboard" == "Y" ]; then
-        /usr/bin/openssl genrsa -des3 -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+        openssl genrsa -des3 -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
       else
-        /usr/bin/openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
+        openssl genrsa -out $dir/keys/$subject.key $BITS || DieLogging 66 "GenerateCert cannot generate key for $subject"
       fi
      ;;
     *)
     DieLogging 12 "GenerateCert called in an unsupported automated mode ($automated)"
   esac
 LogToSyslog "debug" "Generating CSR for subject $subject..."
-  /usr/bin/openssl req -new -config $dir/csr/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
+  openssl req -new -config $dir/csr/$subject.conf -key $dir/keys/$subject.key -out $dir/csr/$subject.csr || DieLogging 66 "GenerateCert cannot generate a CSR for $subject"
 LogToSyslog "debug" "Asking the CA to sign the certificate for $subject..."
   case "$automated" in
     yes|on)
       LogToSyslog "debug" "-> automated mode is on..."
-      /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+      openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
     no|not|off)
       LogToSyslog "debug" "-> automated mode is off..."
-      /usr/bin/openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
+      openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr || DieLogging 66 "GenerateCert sign the submited CSR for subject $subject"
       ;;
     *)
     DieLogging 12 "GenerateCert called in an unsupported automated mode ($automated)"
@@ -633,18 +633,18 @@ CheckEnv # Start making sure the PKI environment is OK
 case "$automated" in
   yes|on)
     LogToSyslog "debug" "GenerateCRL asked to generate a new CRL"
-    /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "GenerateCRL cannot generate a new CRL"
+    openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem > /dev/null 2>&1 || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
   no|not|off)
     PrintMessage "info" "Generating a new CRL..."
-    /usr/bin/openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
+    openssl ca -gencrl -config $CONFIG_CA -crldays $CRL_DAYS -out $dir/crl/current_crl.pem || DieLogging 66 "GenerateCRL cannot generate a new CRL"
     ;;
   *)
   DieLogging 12 "GenerateCRL called in an unsupported automated mode ($automated)"
 esac
 # FIXME: seems not needed unless wanting to publish outside (which should be done at the end using a "publish" function?)
 #         to be seen when crl distribution point (see #5)
-#/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
+#openssl crl -inform PEM -in $dir/crl/current_crl.pem -outform DER -out $dir/crl/current_crl.der || DieLogging 66 "GenerateCRL cannot encode CRL in DER format"
 
 
 /usr/bin/c_rehash $dir/crl > /dev/null 2>&1 || DieLogging 126 "GenerateCRL cannot rehash its directory"
@@ -743,14 +743,14 @@ esac
 PrintMessage "info" "Revoking certificate for $subject (reason = $revocation_reason):"
 case "$automated" in
   yes|on)
-    /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason > /dev/null 2>&1 || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+    openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason > /dev/null 2>&1 || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
     PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     GenerateCRL || DieLogging 126 "RevokeCert cannot generate a CRL (automated mode is $automated)"
     PrintMessage "info" " - Generating a new CRL..."
     PrintMessage "info" "Certificate for subject $subject has been revoked and a new CRL has been generated."
     ;;
   no|not|off)
-    /usr/bin/openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
+    openssl ca -revoke $dir/certs/$subject.pem -config $CONFIG_CA -crl_reason $revocation_reason || DieLogging 66 "RevokeCert: unable to revoke certificate for subject $subject"
     PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $revocation_reason."
     PrintMessage "info" "You should think about generate a new CRL."
     ;;
@@ -767,7 +767,7 @@ CheckEnv # Start making sure the PKI environment is OK
 
 CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 
-local result=$(/usr/bin/openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
+local result=$(openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regexok=".*$subject.pem: OK\$"
 local regexrevoked=".*:certificate revoked\$"
 local regexexpired=".*:certificate expired" #FIXME: to be checked
@@ -797,7 +797,7 @@ if [ ! -f $dir/crl/current_crl.pem ]; then
   DieLogging 13 "PrintCRLInfo: no CRL present!"
 else 
   echo "Printing current CRL informations:"
-  /usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -text -noout || DieLogging 66 "PrintCRLInfo: error trying to print CRL information"
+  openssl crl -inform PEM -in $dir/crl/current_crl.pem -text -noout || DieLogging 66 "PrintCRLInfo: error trying to print CRL information"
 fi
 }
 
@@ -844,12 +844,12 @@ InfoOnCRL() {
 
 CheckEnv # Start making sure the PKI environment is OK
 
-local crlissuer=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
-local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
-local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
-local crlnumber=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -crlnumber) || DieLogging 66 "PrintCAInfo> cannot stat on CRL number"
+local crlissuer=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
+local lastcrldate=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
+local nextcrldate=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+local crlnumber=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -crlnumber) || DieLogging 66 "PrintCAInfo> cannot stat on CRL number"
 local crlnumbernb=${crlnumber//crlNumber=/}
-local revokedcertnb=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep "Serial Number:" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+local revokedcertnb=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -text | grep "Serial Number:" | /usr/bin/wc -l) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 
 echo "Certificate Revocation List (CRL) info:"
 echo "---------------------------------------"
@@ -876,14 +876,14 @@ CheckEnv # Start making sure the PKI environment is OK
 
 CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $subject does not exists!"
 
-local certissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -issuer -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Issuer from $subject certificate"
-local certsubject=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -subject -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Subject from $subject certificate"
-local certserial=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -serial) || DieLogging 66 "InfoOnCert: cannot stat Serial from $subject certificate"
-local certemail=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -email) || DieLogging 66 "InfoOnCert: cannot stat Email from $subject certificate"
-local certalias=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -alias) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
-local certpurpose=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -purpose) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
-local certstartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
-local certenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
+local certissuer=$(openssl x509 -noout -in $dir/certs/$subject.pem -issuer -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Issuer from $subject certificate"
+local certsubject=$(openssl x509 -noout -in $dir/certs/$subject.pem -subject -nameopt RFC2253) || DieLogging 66 "InfoOnCert: cannot stat Subject from $subject certificate"
+local certserial=$(openssl x509 -noout -in $dir/certs/$subject.pem -serial) || DieLogging 66 "InfoOnCert: cannot stat Serial from $subject certificate"
+local certemail=$(openssl x509 -noout -in $dir/certs/$subject.pem -email) || DieLogging 66 "InfoOnCert: cannot stat Email from $subject certificate"
+local certalias=$(openssl x509 -noout -in $dir/certs/$subject.pem -alias) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
+local certpurpose=$(openssl x509 -noout -in $dir/certs/$subject.pem -purpose) || DieLogging 66 "InfoOnCert: cannot stat Alias from $subject certificate"
+local certstartdate=$(openssl x509 -noout -in $dir/certs/$subject.pem -startdate) || DieLogging 66 "InfoOnCert: cannot stat StartDate from $subject certificate"
+local certenddate=$(openssl x509 -noout -in $dir/certs/$subject.pem -enddate) || DieLogging 66 "InfoOnCert: cannot stat EndDate from $subject certificate"
 $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
@@ -953,18 +953,20 @@ InfoOnCA() {
 CheckEnv # Start making sure the PKI environment is OK
 
 local myhost=$HOSTNAME
-local opensslversion=$(/usr/bin/openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
-local caissuer=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
-local castartdate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -startdate) || DieLogging 66 "PrintCAInfo: cannot stat CA startdate from CA certificate"
-local caenddate=$(/usr/bin/openssl x509 -noout -in $dir/certs/ca.pem -enddate) || DieLogging 66 "PrintCAInfo: cannot stat CA enddate from CA certificate"
+local operatingsystem=$(uname -s) || DieLogging 125 "PrintCAInfo: cannot stat Operating System"
+local opensslversion=$(openssl version) || DieLogging 66 "PrintCAInfo: cannot stat on OpenSSL version"
+local caissuer=$(openssl x509 -noout -in $dir/certs/ca.pem -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo: cannot stat CA issuer from CA certificate"
+local castartdate=$(openssl x509 -noout -in $dir/certs/ca.pem -startdate) || DieLogging 66 "PrintCAInfo: cannot stat CA startdate from CA certificate"
+local caenddate=$(openssl x509 -noout -in $dir/certs/ca.pem -enddate) || DieLogging 66 "PrintCAInfo: cannot stat CA enddate from CA certificate"
 local validcert=$(grep "^V" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Valid certificates in CA index file"
 local revokedcert=$(grep "^R" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Revoked certificates in CA index file"
 local expiredcert=$(grep "^E" $dir/datas/index | /usr/bin/wc -l) || DieLogging 126 "PrintCAInfo: cannot count Expired certificates in CA index file"
-local lastcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
-local nextcrldate=$(/usr/bin/openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
+local lastcrldate=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -lastupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL lastupdate"
+local nextcrldate=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -nextupdate) || DieLogging 66 "PrintCAInfo> cannot stat on CRL nextupdate"
 echo "General info on the Certificate Authority:"
 echo "------------------------------------------"
 echo "Host running SPKI:                          $myhost"
+echo "Operating System:                           $operatingsystem"
 echo "Cryptographic Engine:                       $opensslversion"
 echo " - CA Distinguished Name:                   ${caissuer//issuer=\ /}"
 echo " - Start Validity on:                       ${castartdate//notBefore=/}"
@@ -991,7 +993,7 @@ CheckEnv # Start making sure the PKI environmnent is OK
 
 CheckIfExist $subject || DieLogging 13 "PrintCertInfo: Subject $subject does not exists!"
 echo "Printing certificate information for $subject:" 
-/usr/bin/openssl x509 -text -in $dir/certs/$subject.pem -noout || DieLogging 66 "PrintCertInfo: error trying to print Cert information for $subject"
+openssl x509 -text -in $dir/certs/$subject.pem -noout || DieLogging 66 "PrintCertInfo: error trying to print Cert information for $subject"
 }
 
 
