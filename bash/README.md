@@ -190,6 +190,33 @@ Have a look at [Daniel Pocock Blog] page on this topic to help you find your bes
 
 
 # Playin'around
+## File organization
+As you will have understood within minutes, **SPKI** rely on using a specific file organisation, explained hereafter:
+
+    <SPKI_Install_Dir>/ 
+       |-- spki executable (Bash script)
+       |-- spki.conf (User configuration file )
+       |
+       |--private/ where SPKI store the Certificate Authority private stuff
+       |         |-- ca.key: the CA private key (MUST NOT BE DISTRIBUTED)
+       |         \-- root_ca.conf: the CA OpenSSL configuration file
+       |
+       |--datas/ where SPKI store index, serials and databases
+       |       |-- random_bits: pseudo-Random bytes used for OpenSSL entropy
+       |       |-- index(.old): index of all certificates (and last action backup)
+       |       |-- serial_cert(.old): next certificate serial (and...)
+       |       |-- serial_crl(.old): next CRL serial to be used
+       |       \--certs/ directory containing all certificates
+       |
+       |--csr/ where all Cerfiticate Signing Request are stored - with associated OpenSSL configuration
+       |
+       |--crl/ where the current CRL is generated, and hashed to be used for certificate verification
+       |
+       |--keys/ where all delivered certificate private keys are stored (MUST NOT BE DISTRIBUTED)
+       |
+       \--certs/ where all public certs are published (may be publicly available)
+       
+
 ## Big Guys need Big Certs... 
 **SPKI** can handle thousands of certificates like a charm, but how does it cope with millions? The correct answer is - so far I dunno :)
 

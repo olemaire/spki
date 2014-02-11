@@ -28,16 +28,6 @@ logtofile="/dev/null"                # If logfile is activated (specific logfile
 # Non overridable values - cannot be changed by user's configuration file
 # SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
 dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
-                                         # where the following sub-directories are used:
-                                         # private/ : where the Certificate Authority key is stored for internal SPKI usage
-                                         #   ca.key: Certificate Authority private key - MUST NOT BE DISTRIBUTED
-                                         #   root_ca.conf: Certificate Authority OpenSSL configuration file
-                                         # datas/ : where index, serials and DB are stored for internal SPKI usage
-                                         #   index(.old): index of all certificates (and last action backup)
-                                         #   serial_cert(.old): next certificate serial to ve used (and last action backup)
-                                         #   serial_crl(.old): next CRL serial to be used (and last action backup)
-                                         #   certs/: directory containing all certificates delivered so far
-                                         #   random_bits: pseudo-Random bytes used for OpenSSL entropy
 SPKI_CONFIG="$dir/spki.conf"             # SPKI configuration file - if you want to override default builtin values
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
 loggertag="SPKI"                         # Tag used for messages within syslog
