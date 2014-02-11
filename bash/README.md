@@ -61,34 +61,26 @@ As user *glamorous*, create and edit the `/opt/PKI/spki.conf` new file and modif
     #  Please no space nor tabs between KEY/VALUE and "=" 
     
     ## user/context variables - have to be changed depending on user/context
-    # Country Code you want to registrer the PKI to (must be 2 letter
-    # country code)
+    # Country Code you want to registrer the PKI to (must be 2 letter country code)
     COUNTRY="US"
-    # Domain name that will appear by default: change it by your company domain
-    # name
+    # Domain name that will appear by default: change it by your company domain name
     DOMAIN="acme.com"
     # Company name that will appear by default: change it by your company name
     COMPANY="ACME"
-    # The Support Email address used for server certiciates (DOMAIN will be
-    # prepended to with @)
+    # The Support Email address used for server certiciates (DOMAIN will be prepended to with @)
     supportmail="support"
     # Random bits used (between 1024 and 4096)
     BITS=2048
-    # Certificate Authority certificate will be valid for this period
-    # (just over 20 years...)
+    # Certificate Authority certificate will be valid for this period (just over 20 years...)
     CACERT_DAYS=7306
-    # Server certificate will be issued (new, renewed) for this period
-    # (just over 10 years...)
+    # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
     SERVER_DAYS=3653
-    # User certificates will be issued (new, renewed) for this period
-    # (just over 13 months...)
+    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
     USER_DAYS=396
-    # Days between each CRL is due (a new CRL *MUST* be regenerated before
-    # this delay)
+    # Days between each CRL is due (a new CRL *MUST* be regenerated before this delay)
     CRL_DAYS=31
     
-    ## user/context automation mode - have to be changed depending on user
-    #  context
+    ## user/context automation mode - have to be changed depending on user context
     # Define if SPKI must be full automated or not (yes/not)
     automated="yes"
     # Activate/Desactivate the debug mode (yes/no) - default no
