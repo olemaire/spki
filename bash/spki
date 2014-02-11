@@ -978,34 +978,34 @@ PrintVerifyInfo() {
 # @ill print verify info on $subject
 local subject=$1
 
-CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
+CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $subject does not exists!"
 
 $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
     local certcurrentstatus="VALID"
-    echo -e "Certificate for $subject is: $COL_GREEN$certcurrentstatus$COL_RESET"
+    PrintMessage "info" "Certificate for $subject is: $COL_GREEN$certcurrentstatus$COL_RESET"
     return 0
     ;;
  101)
     local certcurrentstatus="REVOKED"
-    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    PrintMessage "info" "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 101
     ;;
  102)
     local certcurrentstatus="EXPIRED"
-    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    PrintMessage "info" "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 102
     ;;
  100)
     local certcurrentstatus="UNKNOWN"
-    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    PrintMessage "info" "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
     return 100
     ;;
    *)
     local certcurrentstatus="UNKNOWN"
-    echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
-    LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject"
+    PrintMessage "warn" "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
+    LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject - not a normal condition"
     return 103
 esac
 
@@ -1258,7 +1258,7 @@ case "$priority" in
     fi
     ;;
   info)
-    echo "----> $message"
+    echo -e "----> $message"
     if [ "$debugmode" == "yes" ]; then
       LogToSyslog "$priority" "$message"
     fi
