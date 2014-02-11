@@ -19,8 +19,10 @@ USER_DAYS=396                    # User certificates will be issued (new, renewe
 CRL_DAYS=31                      # Days between each CRL is due (a new CRL *MUST* be regenerated before this delay)
 
 # user/context automation mode - may be overrided by user configuration file (spki.conf) - DO NOT EDIT THERE
-automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
+automated="yes"                          # Define if SPKI must be full automated or not (yes/no)
 debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
+specificlogfile="no"                     # Activate a specific logfile (yes/no) - default no (using syslog)
+logtofile="/dev/null"                # If logfile is activated (specific logfile instated of syslog), then which is the log file to use
 
 
 # Non overridable values - cannot be changed by user's configuration file
@@ -185,12 +187,40 @@ do
       debugmode)
         case "$rhs" in
           yes|no)
-            debugmode="$rhs"
+            debugmode="$rhs" 
             LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
             ;;
           *)
             DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
         esac
+        ;;
+      specificlogfile)
+        case "$rhs" in
+          yes|no)
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            specificlogfile="$rhs" # done after LogToSyslog as logtofile not yet tested ok (so better safe than sorry)
+            ;;
+          *)
+            DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
+        esac
+        ;;
+      logtofile)
+        if [ "$specificlogfile" == "yes" ]; then
+          if [ -w $rhs ]; then
+            logtofile="$rhs"
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+          else
+            $(touch $rhs > /dev/null 2>&1) ; local testtouch=$?
+            if [ "$testtouch" -eq "0" ]; then
+              logtofile="$rhs"
+              LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            else
+              DieLogging 9 "ParseConfig: $lhs not supported as ($rhs) not writable"
+            fi 
+          fi
+        else
+          LogToSyslog "debug" "ParseConfigFile: ignoring logtofile value as specificlogfile is positionned at no"
+        fi 
         ;;
       *)
         LogToSyslog "warn" "ParseConfigFile: not supported value ($lhs) - typo error? - ignoring"
@@ -1102,6 +1132,7 @@ DieLogging() {
 # exit with error code and associated message, sysloging too.
 local errorcode=$1
 local message=$2
+
 case "$errorcode" in
   0|100)
     PrintMessage "warn" "Nobody should die with exit return code 0 or 100 - called with message $message"
@@ -1127,32 +1158,49 @@ case "$errorcode" in
   *)
     PrintMessage "warn" "Unknown Error Code($errorcode): called with message $message"
 esac
-    PrintMessage "info" "Exiting with Error Code $errorcode..."
+    PrintMessage "info" "Exiting with Error Code $errorcode ($message)..."
 exit $errorcode
 }
 
 LogToSyslog() {
-# will log to syslog
+# will log to syslog (anyway) - and eventually to specific log file too if configuration ask for that
 local priority=$1
 local message=$2
+local timestamp=$(date -u "+%Y-%m-%dT%H:%M:%S+0000") 
+
 case "$priority" in 
   debug)
     if [ "$debugmode" == "yes" ]; then
+      if [ "$specificlogfile" == "yes" ]; then
+        echo "$timestamp : $loggertag-$priority : $message" >> $logtofile
+      fi
       /usr/bin/logger -p $loggerchan.$priority -t $loggertag "$priority - $message"
     fi
     ;;
   emerg|alert|crit|notice|info)
     /usr/bin/logger -p $loggerchan.$priority -t $loggertag "$priority - $message"
+    if [ "$specificlogfile" == "yes" ]; then
+      echo "$timestamp : $loggertag-$priority : $message" >> $logtofile
+    fi
     ;;
   err|error)
     /usr/bin/logger -p $loggerchan.err -t $loggertag "$priority - $message"
+    if [ "$specificlogfile" == "yes" ]; then
+      echo "$timestamp : $loggertag-$priority : $message" >> $logtofile
+    fi
     ;;
   warn|warning)
     /usr/bin/logger -p $loggerchan.warn -t $loggertag "$priority - $message"
+    if [ "$specificlogfile" == "yes" ]; then
+      echo "$timestamp : $loggertag-$priority : $message" >> $logtofile
+    fi
     ;;
   *)
     /usr/bin/logger -p $loggerchan.warning -t $loggertag "notice - syslog priority unknown -> $priority"
     /usr/bin/logger -p $loggerchan.warning -t $loggertag "$priority - $message"
+    if [ "$specificlogfile" == "yes" ]; then
+      echo "$timestamp : $loggertag-$priority : $message" >> $logtofile
+    fi
 esac
 }
 
