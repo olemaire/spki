@@ -969,12 +969,9 @@ PrintCRLInfo() {
 
 CheckEnv # Start making sure the PKI environment is OK
 
-if [ ! -f $dir/crl/current_crl.pem ]; then
-  DieLogging 13 "PrintCRLInfo: no CRL present!"
-else 
-  echo "Printing current CRL informations:"
-  openssl crl -inform PEM -in $dir/crl/current_crl.pem -text -noout || DieLogging 66 "PrintCRLInfo: error trying to print CRL information"
-fi
+echo "Printing current CRL informations:"
+openssl crl -inform PEM -in $dir/crl/current_crl.pem -text -noout || DieLogging 66 "PrintCRLInfo: error trying to print CRL information"
+
 }
 
 PrintVerifyInfo() {
