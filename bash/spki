@@ -1104,7 +1104,7 @@ esac
 
 echo "Certificate usefull informations:"
 echo "---------------------------------"
-echo "Certificate issed for subject:                $subject"
+echo "Certificate issued for subject:               $subject"
 echo " - Delivered by:                              ${certissuer//issuer=\ /}"
 echo " - for subject DN:                            ${certsubject//subject=\ /}"
 echo " - Certificate serial number:                 $((0x${certserial//serial=/})) (hex: ${certserial//serial=/})"
