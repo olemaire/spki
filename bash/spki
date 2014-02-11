@@ -636,6 +636,7 @@ LogToSyslog "debug" "Asking the CA to sign the certificate for $subject..."
   esac
 LogToSyslog "debug" "Extracting certificate for subject $subject..."
   /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "GenerateCert cannot extract certificate for subject $subject"
+  rm $dir/certs/$subject.txt || DieLogging 126 "GenerateCert cannot remove (not needed anymore) certificate text file for $subject" 
 LogToSyslog "debug" "Verifying certificate for $subject..."
   VerifyCert $subject || DieLogging 126 "GenerateCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
 PrintMessage "info" "Certificate ($certtype) generated for $subject:"
@@ -766,6 +767,7 @@ case "$verifycert" in
     esac
     LogToSyslog "debug" "Extracting certificate for subject $subject..."
     /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "RenewCert cannot extract certificate for subject $subject"
+    rm $dir/certs/$subject.txt || DieLogging 126 "RenewCert cannot remove (not needed anymore) certificate text file for $subject"
     LogToSyslog "debug" "Verifying certificate for $subject..."
     VerifyCert $subject || DieLogging 126 "RenewCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
     PrintMessage "info" " - A New Certificate ($certtype) generated for $subject at:"
@@ -793,6 +795,7 @@ case "$verifycert" in
     esac
     LogToSyslog "debug" "Extracting certificate for subject $subject..."
     /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "RenewCert cannot extract certificate for subject $subject"
+    rm $dir/certs/$subject.txt || DieLogging 126 "RenewCert cannot remove (not needed anymore) certificate text file for $subject"
     LogToSyslog "debug" "Verifying certificate for $subject..."
     VerifyCert $subject || DieLogging 126 "RenewCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
     PrintMessage "info" " - A New Certificate ($certtype) generated for $subject at:"
@@ -826,6 +829,7 @@ case "$verifycert" in
     esac
     LogToSyslog "debug" "Extracting certificate for subject $subject..."
     /usr/bin/perl -n -e 'm/BEGIN CERTIFICATE/ && do {$$seen=1}; $$seen && print;' < $dir/certs/$subject.txt > $dir/certs/$subject.pem || DieLogging 126 "RenewCert cannot extract certificate for subject $subject"
+    rm $dir/certs/$subject.txt || DieLogging 126 "RenewCert cannot remove (not needed anymore) certificate text file for $subject"
     LogToSyslog "debug" "Verifying certificate for $subject..."
     VerifyCert $subject || DieLogging 126 "RenewCert certificate verification failed (UNKNOWN, so INVALID) for subject $subject"
     PrintMessage "info" " - A New Certificate ($certtype) generated for $subject at:"

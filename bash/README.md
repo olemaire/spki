@@ -224,11 +224,11 @@ More seriousely, actually, this [Bash] flavor has been tested with up to around 
 
 As far as I can see:
 
+* numerous files - and so **inodes** - taken to deal with files (Certificates, CSR, configurations, ...) of small sizes: this will have impact on your file system usage (or settings), and so you must careful select (and configure) it for this usage.
 * generating a certificate takes from 0.2 second to 0.9 second, depending on the arch you are using. Revoking a certificate takes around 0.05 to 0.1 second, and seems to be less impacted by your arch.
 * the [OpenSSL] index file has to be loaded in memory each time [OpenSSL] is used, which means having some RAM on your system for big databaes: 400 KB index file for 3.500 certificates, 1.7 MB index file for 15.000 certificates, and ended up with 2.5 MB for 22.271 certificates.
-* numerous files - and so inodes - taken to deal with files (Certificates, CSR, configurations, ...) of small sizes: this will have impact on your file system usage (or settings).
 * As there is lots of read/write operations on disk ([OpenSSL] index, **SPKI** storing certificates and associated files), selecting a efficient drive helps alot (SSD for extreme boys...)
 
-This means that handling thousands of certificates can still be done on a Raspberry Pi if needed, but for millions of certificates some real bench should be envisaged to select the best hardware (or Virtual Machine tier at Amazon, Google or VPS.me...)
+This means that handling thousands of certificates can still be done on a Raspberry Pi if needed, but for millions of certificates some real bench should be envisaged to select the best hardware (or Virtual Machine tier...) and file system type and options (XFS?).
 
 
