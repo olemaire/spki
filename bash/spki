@@ -1,6 +1,6 @@
 #!/bin/bash
 #   SPKI -  Simple Public Key Infrastructure
-#   Copyright © 2013 Senso-Rezo
+#   Copyright © 2014 Senso-Rezo
 #   All rights reserved.
 #   See LICENSE file for licensing information.
 #   See http://github.com/olemaire/spki for more information.
@@ -1389,6 +1389,4 @@ case "$1" in
     DieLogging 12 "SPKI invalid function call $1 (try --help)"
 esac
 
-# TODO:
-# * deal with publication (CA cert, certs, crl) on a repository (see with OpenSSL configuration for CRL distribution)
 # - This Is The End
