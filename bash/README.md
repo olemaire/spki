@@ -48,25 +48,79 @@ Once installed, you need to configure:
 1. the mode of operation of your **SPKI**: Automated or not.
 2. the default fields you want **SPKI** to apply/propose.
 
-As user *glamorous*, edit the `/opt/PKI/spki` file and modify the following values accordingly to your needs.
+As user *glamorous*, create and edit the `/opt/PKI/spki.conf` new file and modify the following values accordingly to your needs. Here is an example with self explanatory comments:
 
-To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *not* instead.
+    ## SPKI configuration file
+    #  will override default values if used
+    #  Please handle with care and DO NOT CHANGE WHEN THE CA HAS BEEN INIALIZED
+    #  (else you'll kill you PKI...)
+    #
+    #  Syntax:
+    #    KEY=VALUE
+    #  or KEY="VALUE"
+    #  Please no space nor tabs between KEY/VALUE and "=" 
+    
+    ## user/context variables - have to be changed depending on user/context
+    # Country Code you want to registrer the PKI to (must be 2 letter
+    # country code)
+    COUNTRY="US"
+    # Domain name that will appear by default: change it by your company domain
+    # name
+    DOMAIN="acme.com"
+    # Company name that will appear by default: change it by your company name
+    COMPANY="ACME"
+    # The Support Email address used for server certiciates (DOMAIN will be
+    # prepended to with @)
+    supportmail="support"
+    # Random bits used (between 1024 and 4096)
+    BITS=2048
+    # Certificate Authority certificate will be valid for this period
+    # (just over 20 years...)
+    CACERT_DAYS=7306
+    # Server certificate will be issued (new, renewed) for this period
+    # (just over 10 years...)
+    SERVER_DAYS=3653
+    # User certificates will be issued (new, renewed) for this period
+    # (just over 13 months...)
+    USER_DAYS=396
+    # Days between each CRL is due (a new CRL *MUST* be regenerated before
+    # this delay)
+    CRL_DAYS=31
+    
+    ## user/context automation mode - have to be changed depending on user
+    #  context
+    # Define if SPKI must be full automated or not (yes/not)
+    automated="yes"
+    # Activate/Desactivate the debug mode (yes/no) - default no
+    debugmode="no"
+    # Activate a specific logfile (yes/no) - default no (using syslog)
+    specificlogfile="yes"
+    # If specificlogfile is activated, then which is the log file to use
+    logtofile="/tmp/spki.log"
+    
+    ## - This Is The End
 
-    automated="yes"  # Define if SPKI must be full automated or not (yes/not)
+
+To select the Automated mode, make sure *yes* is the value for the "automated" variable (default configuration). If you prefer the manual mode, then enter *no* instead.
+
+    # Default is no
+    automated="yes"
     
 To configure the default fields of your PKI, modify the following variables to best suit your need (see the "Tips and Tricks"" section of this document for some more infos). For example:
 
-    # user/context variables - have to be changed depending on user/context
-    COUNTRY="US"               # Country Code you want to registrer the PKI to (must be 2 letter country code)
-    DOMAIN="acme.com"          # Domain name that will appear by default: change it by your company domain name
-    COMPANY="ACME"             # Company name that will appear by default: change it by your company name
-    supportmail="support"      # The Support Email address used for server certiciates
-    BITS=2048                  # Random bits used
-    SERVER_DAYS=3653           # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
-    USER_DAYS=396              # User certificates will be issued (new, renewed) for this period (just over 13 months...)
-    CRL_DAYS=31                # Days between each CRL is due (so 1 CRL per full month)
+    COUNTRY="US"
+    DOMAIN="acme.com"
+    COMPANY="ACME"
+    supportmail="support"
+    BITS=2048
+    CACERT_DAYS=7306
+    SERVER_DAYS=3653
+    USER_DAYS=396
+    CRL_DAYS=31
 
-Once done, you can unflag the write attibute of the `/opt/PKI/spki` file. 
+Note that BITS cannot be under 1024 nor greater than 4096 - as can cause issue to some SSL clients if not in this range. Default value of 2048 is ok.
+
+Once done, you can unflag the write attibute of the `/opt/PKI/spki` file to make sure not to modify it later on
 
     glamorous@scalde:/opt/PKI$ chmod -w spki 
 
@@ -89,14 +143,23 @@ Your **SPKI** is ready to serve:
     General info on the Certificate Authority:
     ------------------------------------------
     Host running SPKI:                          scalde
+    Operating System:                           Linux
     Cryptographic Engine:                       OpenSSL 1.0.1c 10 May 2012
-    Certificate Authority DN:                   C=US/O=ACME/OU=ACME Security Services/CN=ACME Root CA
-    Start Validity on:                          Jan 21 17:41:23 2014 GMT
-    End Validity on:                            Jan 22 17:41:23 2024 GMT
-    Issued certificates Valid/Revoked/Expired:  0 / 0 / 0
-    Last CRL produced on:                       Jan 21 17:41:23 2014 GMT
-    Next CRL to be produced on:                 Feb 21 17:41:23 2014 GMT
+     - CA Distinguished Name:                   C=US/O=ACME/OU=ACME Security Services/CN=ACME Root CA
+     - Start Validity on:                       Jan 21 17:41:23 2014 GMT
+     - End Validity on:                         Jan 22 17:41:23 2034 GMT
+    
+    Issued certificates:
+     - Valid:                                   0
+     - Revoked:                                 0
+     - Expired:                                 0
+    
+    CRL infos:
+     - Last CRL produced on:                    Jan 21 17:41:23 2014 GMT
+     - Next CRL to be produced on:              Feb 21 17:41:23 2014 GMT
+    
     Current Status:                             OK
+
     glamorous@scalde:/opt/PKI$ 
 
 You can now start using your **SPKI** to manage certificates :)
@@ -111,18 +174,23 @@ By default, **SPKI** will use keys of 2048 bits. If you want another size, just 
     BITS=2048                        # Random bits used
 
 There is no "best and fits all" solution for key size: have a look at [Daniel Pocock Blog] page on this topic.
+
+Anyway, **SPKI** will force you to use BITS within the range 1024 to 4096 - to make sure no issues with all known OpenSSL clients.
 ## Renewal time
 By default, **SPKI** will issue:
 
 * *user* certificate for 13 months - then you will need to renew them
-* *server* certiticates for just over 20 years (! yes :) - then you will need to renew them.
+* *server* certiticates for just over 10 years (! yes :) - then you will need to renew them.
 * *CRL* that last for 31 days before needing generation of a new *CRL* (of course you are free to deliver new *CRL* before this date).
+* *CA* certificate for 20 years (yes !) - then you will need to renew the CA certificate (a not automated process - yet)
 
 You can of course set your own duration, using the following variables:
 
-    SERVER_DAYS=7306      # Server certificate will be issued (new, renewed) for this period (just over 20 years...)
-    USER_DAYS=396         # User certificates will be issued (new, renewed) for this period (just over 13 months...)
-    CRL_DAYS=31           # Days between each CRL is due
+    CACERT_DAYS=7306                 # Certificate Authority certificate will be valid for this period (just over 20 years...)
+    SERVER_DAYS=3653                 # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
+    USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
+    CRL_DAYS=31                      # Days between each CRL is due (a new CRL *MUST* be regenerated before this delay)
+
 
 As for key size, there is no "best and fits all" (nor best practice anyway) regarding the duration to use for certificate issuing - as it really depends on your specific needs and organisation.
 
