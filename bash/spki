@@ -7,19 +7,18 @@
 
 # spki - spki core util (command line)
 
-# Default values - will be overridable by configuration file
-# user/context variables - have to be changed depending on user/context
+# Default values - will be overridable by configuration file (spki.conf) - DO NOT EDIT THERE
 COUNTRY="US"                     # Country Code you want to registrer the PKI to (must be 2 letter country code)
 DOMAIN="senso-rezo.org"          # Domain name that will appear by default: change it by your company domain name
 COMPANY="Senso-Rezo"             # Company name that will appear by default: change it by your company name
 supportmail="sysadm"             # The Support Email address used for server certiciates
-BITS=2048                        # Random bits used
+BITS=2048                        # Random bits used (recommended values: 1024 >= BITS =< 4096)
 CACERT_DAYS=7306                 # Certificate Authority certificate will be valid for this period (just over 20 years...)
 SERVER_DAYS=3653                 # Server certificate will be issued (new, renewed) for this period (just over 10 years...)
 USER_DAYS=396                    # User certificates will be issued (new, renewed) for this period (just over 13 months...)
 CRL_DAYS=31                      # Days between each CRL is due (a new CRL *MUST* be regenerated before this delay)
 
-# user/context automation mode - have to be changed depending on user context
+# user/context automation mode - may be overrided by user configuration file (spki.conf) - DO NOT EDIT THERE
 automated="yes"                          # Define if SPKI must be full automated or not (yes/not)
 debugmode="no"                           # Activate/Desactivate the debug mode (yes/no) - default no
 
@@ -113,29 +112,6 @@ else
   LogToSyslog "debug" "CheckConfig: no configuration file found, using default builtin values"
 fi
 
-case "$automated" in
-  yes|on|no|not|off)
-    LogToSyslog "debug" "CheckConfig: automated mode asked is supported ($automated)"
-    ;;
-  *)
-    DieLogging 9 "CheckConfig: automated mode not supported ($automated)!!!" 
-esac
-case "$debugmode" in
-  yes|no)
-    LogToSyslog "debug" "CheckConfig: debug mode is supported ($debugmode)"
-    ;;
-  *)
-    DieLogging 9 "CheckConfig: debugmode not supported ($debugmode)!!!" 
-esac
-
-if [ "$BITS" -lt 1024 ]; then
-  DieLogging 9 "CheckConfig: Random Bits (BITS) must be greater than 1024!!!"
-elif [ "$BITS" -gt 4096 ]; then
-  DieLogging 9 "CheckConfig: Random Bits (BITS) must be not exceed 4096!!!"
-else
-  LogToSyslog "debug" "CheckConfig: BITS have legal value of $BITS"
-fi
-
 }
 
 ParseConfigFile() {
@@ -168,8 +144,14 @@ do
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
       BITS)
-        BITS="$rhs"
-        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        if [ "$rhs" -lt 1024 ]; then
+          DieLogging 9 "ParseConfigFile: Random Bits ($lhs) must be greater than 1024!!!"
+        elif [ "$rhs" -gt 4096 ]; then
+          DieLogging 9 "ParseConfigFile: Random Bits ($lhs) must be not exceed 4096!!!"
+        else
+          BITS="$rhs"
+          LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+        fi
         ;;
       CACERT_DAYS)
         CACERT_DAYS="$rhs"
@@ -191,12 +173,24 @@ do
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
       automated)
-        automated="$rhs"
-        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        case "$rhs" in
+          yes|on|no|not|off)
+            automated="$rhs"
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            ;;
+          *)
+            DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
+        esac
         ;;
       debugmode)
-        debugmode="$rhs"
-        LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        case "$rhs" in
+          yes|no)
+            debugmode="$rhs"
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            ;;
+          *)
+            DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
+        esac
         ;;
       *)
         LogToSyslog "warn" "ParseConfigFile: not supported value ($lhs) - typo error? - ignoring"
