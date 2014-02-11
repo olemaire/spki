@@ -717,7 +717,7 @@ esac
 $(VerifyCert $subject) ; local verifycert=$?
 case "$verifycert" in
   0)
-    # Certificat to renew is valid -> revoking it first
+    # Certificate to renew is valid -> revoking it first -> then renew cert
     PrintMessage "info" "Renewing Certificate (type: $certtype) for $subject with reason $renewal_reason:"
     PrintMessage "info" " - a VALID certificate already exits, so revoking it first (reason = $renewal_reason)"
     case "$automated" in
@@ -778,6 +778,7 @@ case "$verifycert" in
     ;;
  102)
     # Certificate to renew has already expired -> revoking reason (superseeded) -> renewing ?
+    #FIXMESTOPPEDHERE
     PrintMessage "info" "SIMUL: Certs to renew has already expirted -> revoking (outOf or superseded...) and renewing?"
     return 0
     #local certcurrentstatus="EXPIRED"
@@ -786,35 +787,13 @@ case "$verifycert" in
     ;;
  100)
     # That means I cannot stat the certificate status -> DieLogging (to be fixed by dev) 
-    PrintMessage "info" "SIMUL: Certs to renew in unkown status-> DieLogging !!!"
-    return 100
-    #local certcurrentstatus="UNKNOWN"
-    #echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
-    #return 100
+    DieLogging 103 "RenewCert cannot renew a certificate of Unkown status for $subject"
     ;;
    *)
-    # That should not arrive -> DieLogging (to be fixed by dev) 
-    PrintMessage "info" "SIMUL: That should not arrive (internal error) -> DieLogging !!!"
-    return 103
-    #local certcurrentstatus="UNKNOWN"
-    #echo -e "Certificate for $subject is: $COL_RED$certcurrentstatus$COL_RESET"
-    #LogToSyslog "warn" "PrintVerifyInfo: stated an UNKNOWN status of certificate for $subject"
-    #return 103
+    DieLogging 103 "RenewCert cannot renew certificate for $subject as cannot determine its actual certificate status -> Unknown"
+    # That situation should not arise
 esac
 
-PrintMessage "info" "RenewCert for $subject (type: $certtypestring) for reason $renewal_reason - Not Implemented Yet"
-
-#FIXMESTOPPEDHERE
-
-# - check we have got its CSR
-# - identify the type of certificate (server,user)
-#3- revoke with reason superseded as default (and not superseded if wrongly specified)
-#4- verify this revoked cert is not anymore valid
-#5- archive the former certificate
-#6- resign CSR and publish certificate according to its type - replacing the cert new > old
-#7- verify new cert - should be valid
-#9- inform user
-#
 }
 
 
@@ -1127,7 +1106,7 @@ case "$errorcode" in
   0|100)
     PrintMessage "warn" "Nobody should die with exit return code 0 or 100 - called with message $message"
     ;;
-  12)
+  12|103)
     PrintMessage "warn" "$message"
     ;;
   9|15|66|67)
