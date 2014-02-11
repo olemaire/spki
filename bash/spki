@@ -597,13 +597,13 @@ fi
 
 case "$certtype" in
   server)
-    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)" #FIXME should not be needed as called by IssueCert
+    CheckSubject "fqdn" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid FQDN ($subject)" #DieLogging should not be needed as called by IssueCert
     GenerateOpenSSLConf "server" "$subject" 
     local certdays=$SERVER_DAYS
     local extensions="spki_type_server_cert"
   ;;
   user)
-    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)" #FIXME shoud not be needed as called by IssueCert
+    CheckSubject "email" "$subject" || DieLogging 12 "GenerateCert cannot generate a certificate for invalid EMAIL ($subject)" #DieLogging shoud not be needed as called by IssueCert
     GenerateOpenSSLConf "user" "$subject" 
     local certdays=$USER_DAYS
     local extensions="spki_type_user_cert"
@@ -710,7 +710,7 @@ esac
 
 CheckIfExist $subject || DieLogging 13 "RenewCert: certificate for subject $subject does not exists!"
 
-local certtype=$(grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "InfoOnCert: cannot stat the CSR configuration file for $subject certificate"
+local certtype=$(grep x509_extension $dir/csr/$subject.conf) || DieLogging 126 "RenewCert: cannot stat the CSR configuration file for $subject certificate"
 certtype=${certtype//*[[:space:]]=\ /}
 certtype=${certtype#spki_type_}
 case "$certtype" in
@@ -729,6 +729,10 @@ case "$certtype" in
     local certcapacities="UNKNOWN"
     DieLogging 12 "RenewCert asked to renew an Unknown type of certificate ($certtype) for $subject"
 esac
+
+if [ ! -f $dir/csr/$subject.csr ]; then
+  DieLogging 126 "RenewCert: cannot find the CSR for $subject certificate"
+fi
 
 case "$reason" in
   unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
@@ -757,6 +761,8 @@ case "$verifycert" in
         PrintMessage "info" " - Certificate for subject $subject has been revoked for reason $renewal_reason."
         GenerateCRL || DieLogging 126 "RenewCert cannot generate a CRL (automated mode is $automated)"
         openssl ca -batch -config $CONFIG_CA -days $certdays -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
+        #FIXME: just for test
+        #openssl ca -batch -config $CONFIG_CA -enddate 140211113400Z -extensions $extensions -out $dir/certs/$subject.txt -infiles $dir/csr/$subject.csr > /dev/null 2>&1 || DieLogging 66 "RenewCert sign the original CSR for subject $subject"
         PrintMessage "info" " - Generating a new certificate (type: $certtype) for $subject..."
         ;;
       no|not|off)
@@ -854,9 +860,26 @@ esac
 
 CheckIfExist $subject || DieLogging 13 "RevokeCert: certificate for subject $subject does not exists!"
 
-if ! VerifyCert $subject ; then
-  DieLogging 14 "RevokeCert: cerfiticate for subject $subject is already revoked!"
-fi
+$(VerifyCert $subject) ; local verifycert=$?
+case "$verifycert" in
+  0|102)
+    # Certif is valid (o) or expired (102), so we may revoke it
+    LogToSyslog "debug" "RevokeCert: can revoke certificate for $subject as certificate is $verifycert (0= valid, 102= expired)"
+    ;;
+  101)
+    # Certificate is already revoked -> So Die 14
+    DieLogging 14 "RevokeCert: certificate for subject $subject is already revoked!"
+    ;;
+  100) 
+   # Certificate is Unknown -> So Die 103...
+    DieLogging 103 "RevokeCert: certificate for subject $subject is already status Unknown (so invalid) -> I will not revoke it!"
+    ;;
+  *)
+   # Unknown state so die 12
+   DieLogging 12 "RevokeCert: certificate for subject $subject is in Undeternined status/return code ($verifycert) - will not be able to revoke it"
+   # That situation should not arise -> Illegal Function Call ?
+esac
+
 case "$reason" in
   unspecified|keyCompromise|CACompromise|affiliationChanged|superseded|cessationOfOperation|certificateHold)
     LogToSyslog "debug" "RevokeCert: is called to revoke certificate for subject $subjet with reason $reason"
@@ -901,7 +924,7 @@ CheckIfExist $subject || DieLogging 13 "VerifyCert: Subject $2 does not exists!"
 local result=$(openssl verify -CApath $dir/crl/ -crl_check $dir/certs/$subject.pem) || DieLogging 126 "VerifyCert cannot verify certificate for subject $subject" 
 local regexok=".*$subject.pem: OK\$"
 local regexrevoked=".*:certificate revoked\$"
-local regexexpired=".*:certificate expired" #FIXME: to be checked
+local regexexpired=".*:certificate has expired"
 
 
 if [[ $result =~ $regexok ]]; then
