@@ -35,7 +35,7 @@ Available options are:
     --crl                            Generate a Certificate Revocation List
     --print <email,fqdn,ca,crl>      Will display a raw print of certificate/CRL
     --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
-    --status                         Will give an overall status of operatin of SPKI
+    --status                         Will give SPKI overall operational status
     --help                           Display this short help message
 
 Exemples:
