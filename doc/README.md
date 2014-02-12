@@ -12,6 +12,7 @@ Usefull documentation to better understand the **SPKI** internals.
 - [Sample logs messages](#Sample-logs)
 
 
+
 # Certificate Authority and CRL status
 The CA and the CRL can be given the following status:
 
