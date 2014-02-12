@@ -458,9 +458,21 @@ or...
 
         
 ## The Manual Way
-FIXMETOBEDONE
+The manual way is not de default mode for **SPKI** and so need to be specified by configuration file (file `spki.conf` - see your prefered flavor documentation):
+
+    automated="no"
+    
+Once done, **SPKI** will:
+
+* allow to use passphrase to protect private keys
+* allow you to modify any certificate fields (email, names, countries...) at generation time
+* will be more verbose, displaying OpenSSL outputs when called.
+
+You can selectively switch mode after **SPKI** initialization, but the choice for the CA private key passphrase protection is done only once: at initialization phase, and if you had selected the manual way (remember, not be default mode).
+
+Running **SPKI** full automated as a base rule, and sometimes in manual mode for selected certificates operations can grant more flexibility on the certificate type you whish to deliver (for example, for a company issueing certificates for occasional subcontractors).
 
 # Credits
-Thank's to ... all folks I did meet the last years around the (S)PKI(X) subject(s) :)
+Thank's to ... all folks I did meet last years around the (S)PKI(X) subject(s) :)
 
 If you are new to the PKI world, an excellent tutorial on implementing a real-world PKI with the [OpenSSL] toolkit can be found there: [http://pki-tutorial.readthedocs.org](http://pki-tutorial.readthedocs.org "")
