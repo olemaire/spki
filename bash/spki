@@ -1364,7 +1364,7 @@ case "$1" in
     ;;
   -status|--status|status)
     if CheckEnv ; then
-      echo "OK"
+      echo -e "$COL_GREEN""OK$COL_RESET"
     fi
     ;;
   -h|-help|--help|help)
