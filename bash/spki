@@ -1287,7 +1287,7 @@ echo "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
 Usage: spki <option> (<subject>) 
 
 Available options are:
-    --initialize                     Initialize a new Certiciate Authority
+    --initialize                     Initialize a new Certificate Authority
     --issue <type> <subject>         Issue a certificate of <type> for <subject>
             server <fqdn>              issue a Server certificate
             user <email>               issue an User certificate

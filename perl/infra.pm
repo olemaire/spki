@@ -20,25 +20,36 @@ my $logfile	=	"/tmp/$0.log";
 sub Usage {
     # will display usage message
     # Usage: &Usage();
-    print "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)\n\n";
-    print "Usage: $0 <option> (<subject>) \n";
-    print "\n";
-    print "Available options are:\n";
-    print "    -init\t\t\t Initialize a new Certiciate Authority.\n";
-    print "    -server <fqdn>\t\t Generate a Server certificate.\n";
-    print "    -user <email>\t\t Generate an User certificate.\n";
-    print "    -verify <email,fqdn>\t Verify a given certificate.\n";
-    print "    -renew <email,fqdn>\t\t Renew a given certificate.\n";
-    print "    -revoke <email,fqdn>\t Revoke a given certificate.\n";
-    print "    -crl\t\t\t Generate a Certificate Revocation List.\n";
-    print "\n";
-    print "Exemples:\n";
-    print "\tspki -server www.senso-rezo.org\n";
-    print "\tspki -user olivier.lemaire\@senso-rezo.org\n";
-    print "\tspki -revoke www.senso-rezo.org\n";
-    print "\tspki -renew olivier.lemaire\@senso-rezo.org\n";
-    print "\tspki crl\n";
-    print "\n";
+    print "Copyright (C) Senso-Rezo - SPKI (http://github.com/olemaire/spki)
+
+Usage: spki <option> (<subject>) 
+
+Available options are:
+    --initialize                     Initialize a new Certificate Authority
+    --issue <type> <subject>         Issue a certificate of <type> for <subject>
+            server <fqdn>              issue a Server certificate
+            user <email>               issue an User certificate
+    --verify <email,fqdn>            Verify a given certificate
+    --renew <email,fqdn> (reason)    Renew a given certificate
+    --revoke <email,fqdn> (reason)   Revoke a given certificate
+    --crl                            Generate a Certificate Revocation List
+    --print <email,fqdn,ca,crl>      Will display a raw print of certificate/CRL
+    --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
+    --status                         Will give an overall status of operatin of SPKI
+    --help                           Display this short help message
+
+Exemples:
+        spki --issue server www.senso-rezo.org
+        spki --issue user olivier.lemaire\@senso-rezo.org
+        spki --info www.senso-rezo.org
+        spki --revoke ldap.senso-rezo.org
+        spki --revoke www.senso-rezo.org keyCompromise
+        spki --renew olivier.lemaire\@senso-rezo.org
+        spki --crl
+        spki --print crl
+
+
+";
     exit(0);    # warning - exit(-1) will not allow to perl pack using perl packer :(
 }
 
