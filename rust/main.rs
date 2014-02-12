@@ -8,8 +8,9 @@
  * See http://github/olemaire/spki for more information.
  */
 
+
 fn main() {
-  Usage();
+ Usage();
 }
 
 fn Usage() {
