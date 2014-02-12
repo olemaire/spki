@@ -1,12 +1,15 @@
 [Bash Return Codes]: http://tldp.org/LDP/abs/html/exitcodes.html
 [syslog Facility and Severity levels]: http://en.wikipedia.org/wiki/Syslog
 
-**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+Usefull documentation to better understand the **SPKI** internals.
+
+**Table of Contents**
 
 - [Certificate Authority and CRL status](#certificate-authority-and-crl-status)
 - [Certificate validity status](#certificate-validity-status)
 - [Return Codes](#return-codes)
 - [Logging (syslog) facility and severity levels](#logging-syslog-facility-and-severity-levels)
+- [Sample logs messages](#Sample-logs)
 
 
 # Certificate Authority and CRL status
@@ -83,4 +86,36 @@ Severity Level | Meaning | Examples
 Note that syslog severity levels *err(or)*, *notice* are not used by **SPKI**, and *debug* is not logged unless debugmode is activated (disabled by default). Anyway, *debug* message are still seen by user form the CLI.
 
 The same return facility and severity levels will be used for the Bash and the Perl flavors of **SPKI**.
+
+# Sample logs
+Here are some syslog example messages:
+
+    Feb 11 14:58:27 scalde SPKI: alert - Initialization of a Certificate Authority triggered
+    Feb 11 14:58:27 scalde SPKI: alert - Initializing Root Certificate Authority for ACME:
+    Feb 11 14:58:29 scalde SPKI: alert - ACME Root Certificate Authority is initialized.
+    Feb 11 15:00:38 scalde SPKI: alert - Initialization of a Certificate Authority triggered
+    Feb 11 15:00:38 scalde SPKI: alert - Initializing Root Certificate Authority for ACME:
+    Feb 11 15:00:40 scalde SPKI: alert - ACME Root Certificate Authority is initialized.
+    Feb 11 15:08:32 scalde SPKI: info - A new CRL has been generated and CRL directory rehashed
+    Feb 11 15:23:23 scalde SPKI: warn - GenerateCert cannot generate a user certificate for invalid EMAIL (servername.acme.com)
+    Feb 11 15:47:48 scalde SPKI: info - A new CRL has been generated and CRL directory rehashed
+    Feb 11 18:05:30 scalde SPKI: warn - SPKI invalid function call --init (try --help)
+    
+And here are some sample specific log file messages:
+
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : ParseConfigFile: logtofile overrided with legal value (/tmp/spki.log)
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification is OK
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : CheckEnv: CA Certificate validy verification is OK
+    Tue Feb 11 10:48:07 UTC 2014 : SPKI-debug : CheckEnv: Openssl updating its index database
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : ParseConfigFile: logtofile overrided with legal value (/tmp/spki.log)
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification is OK
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: CA Certificate validy verification is OK
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: Openssl updating its index database
+    Tue Feb 11 10:48:12 UTC 2014 : SPKI-debug : CheckEnv: CRL Expiry verification
+
+
 
