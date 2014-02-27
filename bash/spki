@@ -118,16 +118,16 @@ do
     rhs="${rhs%\"*}"     # Del opening string quotes 
     rhs="${rhs#\"*}"     # Del closing string quotes 
     case "$lhs" in
-      COUNTRY)
+      country)
         COUNTRY="$rhs"
         ## Should have a check on lenght (2 chars max)
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      DOMAIN)
+      domain)
         DOMAIN="$rhs"
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      COMPANY)
+      company)
         COMPANY="$rhs"
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
@@ -135,7 +135,7 @@ do
         supportmail="$rhs"
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      BITS)
+      bits)
         if [ "$rhs" -lt 1024 ]; then
           DieLogging 9 "ParseConfigFile: Random Bits ($lhs) must be greater than 1024!!!"
         elif [ "$rhs" -gt 4096 ]; then
@@ -145,21 +145,21 @@ do
           LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
         fi
         ;;
-      CACERT_DAYS)
+      cacert_days)
         CACERT_DAYS="$rhs"
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      SERVER_DAYS)
+      server_days)
         SERVER_DAYS="$rhs"
         ## Should be -lt CACERT_DAYS
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      USER_DAYS)
+      user_days)
         USER_DAYS="$rhs"
         ## Should be -lt CACERT_DAYS
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
         ;;
-      CRL_DAYS)
+      crl_days)
         CRL_DAYS="$rhs"
         ## Should be -lt CACERT_DAYS - and all other SERVER/USER_DAYS too
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
@@ -446,6 +446,28 @@ case "$checktype" in
     return 1
 esac
 }
+
+CheckExportType() {
+# Check if $1 (type) is a valid/supported export type - if ok return 0, else return 1
+local checktype=$1
+
+case "$checktype" in
+  pkcs12)
+    # PKCS#12 bundle
+    LogToSyslog "debug" "CheckExport checked a supported Export Type ($checktype) - OK"
+    return 0
+    ;;
+  openvpn)
+    # OpenSSL configuration file with embedded certificates and key - not yet supported
+    LogToSyslog "debug" "CheckExport Type checked a not yet supported export type ($checktype)"
+    return 1
+    ;;
+  *) 
+    LogToSyslog "debug" "CheckExportType checked an unsupported Export type ($checktype)"
+    return 1
+esac
+}
+
 
 CheckSubject() {
 # Check if $2 (subject) is a valid subject (server fqdn or email) depending on type (server=fqdn,user=email) - if ok return 0, else return 1
