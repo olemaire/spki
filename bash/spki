@@ -43,9 +43,11 @@ COL_YELLOW=$ESC_SEQ"33;01m"              #
 # - server
 spki_type_server="spki_type_server_cert"
 spki_type_server_extensions="serverAuth,clientAuth,msSGC,nsSGC"
+spki_type_server_nscerttype="server"
 # - user
 spki_type_user="spki_type_user_cert"
 spki_type_user_extensions="clientAuth,emailProtection"
+spki_type_user_nscerttype="client,email"
 
 
 ## FUNCTIONS
@@ -311,6 +313,7 @@ authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = $spki_type_server_extensions
 basicConstraints                = critical,CA:false
 nsComment                       = "SPKI $COMPANY Server Certificate"
+nsCertType                      = $spki_type_server_nscerttype
 [ v3_ca ]
 basicConstraints                = critical,CA:true
 subjectKeyIdentifier            = hash
@@ -330,6 +333,7 @@ basicConstraints                = critical,CA:false
 authorityKeyIdentifier          = keyid:always
 extendedKeyUsage                = $spki_type_user_extensions
 nsComment                       = "SPKI $COMPANY User Certificate"
+nsCertType                      = $spki_type_user_nscerttype
 EOT
 case "$automated" in
   yes|on)
@@ -503,7 +507,7 @@ case "$conftype" in
     local emailaddress="Server Administrator email address"
     local emailaddressdefault="$supportmail@$DOMAIN"
     local extendedkeyusage="serverAuth, clientAuth"
-    local nscerttype="server"
+    local nscerttype=$spki_type_server_nscerttype
     ;;
   user)
     local certreq="spki_type_user"
@@ -511,7 +515,7 @@ case "$conftype" in
     local emailaddress="User email address"
     local emailaddressdefault="$subject"
     local extendedkeyusage="clientAuth"
-    local nscerttype="client,email"
+    local nscerttype=$spki_type_user_nscerttype
     ;;
   *)
     DieLogging 12 "Illegal function call: GenerateOpenSSLConf with type $conftype"
