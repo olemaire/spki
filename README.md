@@ -47,16 +47,16 @@ See related flavor Installation pages: browse the associated directory and have 
 Here a sample configuration file for a [Bash] flavor **SPKI**, used in the scope of the present manual/howto:
 
     ## My SPKI configuration file
-    COUNTRY="US"
-    DOMAIN="acme.com"
-    COMPANY="ACME"
+    country="US"
+    domain="acme.com"
+    company="ACME"
     supportmail="helpdesk"
     
-    BITS=2048
-    CACERT_DAYS=7306
-    SERVER_DAYS=3653
-    USER_DAYS=396
-    CRL_DAYS=31
+    bits=2048
+    cacert_days=7306
+    server_days=3653
+    user_days=396
+    crl_days=31
     
     automated="yes"
     debugmode="no"
