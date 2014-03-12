@@ -87,6 +87,7 @@ No matter the mode you are running on, the same CLI is provided, and pretty self
         --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
         --status                         Will give an overall status of operatin of SPKI
         --help                           Display this short help message
+        --version                        Will display the SPKI version
 
 For now, two types of certificates are delivered:
 

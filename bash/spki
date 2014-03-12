@@ -27,6 +27,7 @@ logtofile="/dev/null"                # If logfile is activated (specific logfile
 
 # Non overridable values - cannot be changed by user's configuration file
 # SPKI internal variables - should not be changed unless you perfectly know what your are doing (and prepare to debug)
+spkirelease=0.1                          # release of SPKI
 dir=$(cd `dirname $0` && pwd)            # directory where the SPKI is to be run
 SPKI_CONFIG="$dir/spki.conf"             # SPKI configuration file - if you want to override default builtin values
 CONFIG_CA="$dir/private/root_ca.conf"    # where the Certificate Authority OpenSSL configuration file is stored
@@ -1325,6 +1326,7 @@ Available options are:
     --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
     --status                         Will give SPKI overall operational status
     --help                           Display this short help message
+    --version                        Will display the SPKI version
 
 Examples:
         spki --issue server www.senso-rezo.org
@@ -1392,6 +1394,9 @@ case "$1" in
     if CheckEnv ; then
       echo -e "$COL_GREEN""OK$COL_RESET"
     fi
+    ;;
+  -v|-version|--version|version)
+    echo -e "SPKI release: $COL_GREEN""$spkirelease$COL_RESET"
     ;;
   -h|-help|--help|help)
     Usage

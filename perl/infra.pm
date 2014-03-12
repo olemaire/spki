@@ -37,6 +37,7 @@ Available options are:
     --info (email,fqdn,ca,crl)       Will give human readable information on SPKI certificate/CA/CRL
     --status                         Will give SPKI overall operational status
     --help                           Display this short help message
+    --version                        Will display the SPKI version
 
 Exemples:
         spki --issue server www.senso-rezo.org
