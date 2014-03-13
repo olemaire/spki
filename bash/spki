@@ -171,7 +171,7 @@ do
         ;;
       server_subject)
         case "$rhs" in
-          fqdn|email|any)
+          fqdn|email|uid)
             server_subject="$rhs"
             LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
             ;;
@@ -181,7 +181,7 @@ do
         ;;
       user_subject)
         case "$rhs" in
-          fqdn|email|any)
+          fqdn|email|uid)
             user_subject="$rhs"
             LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
             ;;
