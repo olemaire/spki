@@ -42,10 +42,12 @@ COL_YELLOW=$ESC_SEQ"33;01m"              #
 # SPKI known types of certificates and related extensions
 # Known SPKI types: 
 # - server
+server_subject="fqdn"
 spki_type_server="spki_type_server_cert"
 spki_type_server_extensions="serverAuth,clientAuth,msSGC,nsSGC"
 spki_type_server_nscerttype="server"
 # - user
+user_subject="email"
 spki_type_user="spki_type_user_cert"
 spki_type_user_extensions="clientAuth,emailProtection"
 spki_type_user_nscerttype="client,email"
@@ -166,6 +168,26 @@ do
         CRL_DAYS="$rhs"
         ## Should be -lt CACERT_DAYS - and all other SERVER/USER_DAYS too
         LogToSyslog "debug" "ParseConfigFile: value ($lhs) overrided with content ($rhs)"
+        ;;
+      server_subject)
+        case "$rhs" in
+          fqdn|email|any)
+            server_subject="$rhs"
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            ;;
+          *)
+            DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
+        esac
+        ;;
+      user_subject)
+        case "$rhs" in
+          fqdn|email|any)
+            user_subject="$rhs"
+            LogToSyslog "debug" "ParseConfigFile: $lhs overrided with legal value ($rhs)"
+            ;;
+          *)
+            DieLogging 9 "ParseConfigFile: $lhs not supported ($rhs)!!!"
+        esac
         ;;
       automated)
         case "$rhs" in
