@@ -45,13 +45,13 @@ COL_YELLOW=$ESC_SEQ"33;01m"              #
 server_subject="fqdn"
 spki_type_server="spki_type_server_cert"
 spki_type_server_keyusage="digitalSignature, keyEncipherment, dataEncipherment"
-spki_type_server_extendedkeyusage="serverAuth,clientAuth,msSGC,nsSGC,timeStamping,msCTLSign"
+spki_type_server_extendedkeyusage="serverAuth,clientAuth"
 spki_type_server_nscerttype="server"
 # - user
 user_subject="email"
 spki_type_user="spki_type_user_cert"
 spki_type_user_keyusage="digitalSignature, keyAgreement, dataEncipherment"
-spki_type_user_extendedkeyusage="clientAuth,emailProtection,codeSigning,msCodeInd"
+spki_type_user_extendedkeyusage="clientAuth,emailProtection"
 spki_type_user_nscerttype="client,email,objsign"
 
 
