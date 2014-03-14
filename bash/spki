@@ -44,7 +44,7 @@ COL_YELLOW=$ESC_SEQ"33;01m"              #
 # - server
 server_subject="fqdn"
 spki_type_server="spki_type_server_cert"
-spki_type_server_keyusage="digitalSignature, keyEncipherment, dataEncipherment"
+spki_type_server_keyusage="digitalSignature, keyAgreement, dataEncipherment"
 spki_type_server_extendedkeyusage="serverAuth,clientAuth"
 spki_type_server_nscerttype="server"
 # - user
