@@ -44,13 +44,15 @@ COL_YELLOW=$ESC_SEQ"33;01m"              #
 # - server
 server_subject="fqdn"
 spki_type_server="spki_type_server_cert"
-spki_type_server_extensions="serverAuth,clientAuth,msSGC,nsSGC"
+spki_type_server_keyusage="digitalSignature, keyEncipherment, dataEncipherment"
+spki_type_server_extendedkeyusage="serverAuth,clientAuth,msSGC,nsSGC,timeStamping,msCTLSign"
 spki_type_server_nscerttype="server"
 # - user
 user_subject="email"
 spki_type_user="spki_type_user_cert"
-spki_type_user_extensions="clientAuth,emailProtection"
-spki_type_user_nscerttype="client,email"
+spki_type_user_keyusage="digitalSignature, keyAgreement, dataEncipherment"
+spki_type_user_extendedkeyusage="clientAuth,emailProtection,codeSigning,msCodeInd"
+spki_type_user_nscerttype="client,email,objsign"
 
 
 ## FUNCTIONS
@@ -333,7 +335,8 @@ emailAddress            = optional
 [ spki_type_server_cert ]
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid:always
-extendedKeyUsage                = $spki_type_server_extensions
+keyUsage                        = $spki_type_server_keyusage
+extendedKeyUsage                = $spki_type_server_extendedkeyusage
 basicConstraints                = critical,CA:false
 nsComment                       = "SPKI $COMPANY Server Certificate"
 nsCertType                      = $spki_type_server_nscerttype
@@ -354,7 +357,8 @@ emailAddress                    = supplied
 subjectAltName                  = email:copy
 basicConstraints                = critical,CA:false
 authorityKeyIdentifier          = keyid:always
-extendedKeyUsage                = $spki_type_user_extensions
+keyUsage                        = $spki_type_user_keyusage
+extendedKeyUsage                = $spki_type_user_extendedkeyusage
 nsComment                       = "SPKI $COMPANY User Certificate"
 nsCertType                      = $spki_type_user_nscerttype
 EOT
@@ -529,16 +533,18 @@ case "$conftype" in
     local commonname="Common Name (ex:ldap.$DOMAIN)"
     local emailaddress="Server Administrator email address"
     local emailaddressdefault="$supportmail@$DOMAIN"
-    local extendedkeyusage="serverAuth, clientAuth"
+    local extendedkeyusage=$spki_type_server_extendedkeyusage
     local nscerttype=$spki_type_server_nscerttype
+    local certkeyusage=$spki_type_server_keyusage
     ;;
   user)
     local certreq="spki_type_user"
     local commonname="Common Name (ex: john.doe@$DOMAIN)"
     local emailaddress="User email address"
     local emailaddressdefault="$subject"
-    local extendedkeyusage="clientAuth"
+    local extendedkeyusage=$spki_type_user_extendedkeyusage
     local nscerttype=$spki_type_user_nscerttype
+    local certkeyusage=$spki_type_user_keyusage
     ;;
   *)
     DieLogging 12 "Illegal function call: GenerateOpenSSLConf with type $conftype"
@@ -607,7 +613,7 @@ cat >> $OPENSSL_CONFIG <<EOT || DieLogging 126 "GenerateOpenSSLConf cannot creat
 [ $certreq ]
 basicConstraints      = critical, CA:false
 subjectKeyIdentifier  = hash
-keyUsage              = digitalSignature, keyEncipherment
+keyUsage              = $certkeyusage
 extendedKeyUsage      = $extendedkeyusage
 nsCertType            = $nscerttype
 # - This Is The End
@@ -1130,11 +1136,11 @@ certtype=${certtype#spki_type_}
 case "$certtype" in
   user)
     local certtypestring="USER certificate"
-    local certcapacities=$spki_type_user_extensions
+    local certcapacities=$spki_type_user_extendedkeyusage
     ;;
   server)
     local certtypestring="SERVER certificate"
-    local certcapacities=$spki_type_server_extensions
+    local certcapacities=$spki_type_server_extendedkeyusage
     ;;
   *)
     local certtypestring="UNKNOWN certificate"
