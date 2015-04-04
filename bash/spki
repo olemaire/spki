@@ -312,7 +312,7 @@ certificate             = $dir/certs/ca.pem                                 # Th
 private_key             = $dir/private/ca.key                               # The CA private key
 default_days            = $SERVER_DAYS                                      # How long to certify for
 default_crl_days        = $CRL_DAYS                                         # How long a CRL is due 
-default_md              = sha1                                              # MD to use
+default_md              = sha256                                            # MD to use
 preserve                = no                                                # Keep passed DN ordering
 name_opt                = multiline,-esc_msb,utf8                           # Display UTF-8 characters
 x509_extensions         = spki_type_server_cert                             # default x509v3 extensions used
@@ -560,7 +560,7 @@ case "$automated" in
 [ req ]
 default_bits          = $BITS
 default_keyfile       = $dir/keys/$subject.key
-default_md            = sha1
+default_md            = sha256
 utf8                  = yes
 prompt                = no                                    # do not prompt for DN validation - because full automated way
 distinguished_name    = req_distinguished_name
@@ -581,7 +581,7 @@ EOT
 [ req ]
 default_bits          = $BITS
 default_keyfile       = $dir/keys/$subject.key
-default_md            = sha1
+default_md            = sha256
 utf8                  = yes
 distinguished_name    = req_distinguished_name
 x509_extension        = $certreq
@@ -626,7 +626,7 @@ GenerateCert() {
 local certtype=$1
 local subject=$2
 
-# This Check ash to be kept - unless we want to be able to re-sign a CA (renewal) - not inplemented so far.
+# This Check has to be kept - unless we want to be able to re-sign a CA (renewal) - not inplemented so far.
 case "$subject" in
   ca|crl)
     DieLogging 15 "GeneratCert: Illegal Operation for a protected subject ($subject)"
@@ -1063,7 +1063,6 @@ esac
 
 InfoOnCRL() {
 # Will print human readable infos regarding CRL
-
 CheckEnv # Start making sure the PKI environment is OK
 
 local crlissuer=$(openssl crl -inform PEM -in $dir/crl/current_crl.pem -noout -issuer -nameopt RFC2253) || DieLogging 66 "PrintCAInfo> cannot stat on CRL issuer"
